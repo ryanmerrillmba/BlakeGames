@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Blake's collection of playable games." />
+    <title>Blake Games</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <nav aria-label="Primary navigation">
+        <a class="brand" href="./" aria-label="Blake Games home"><span class="brand-mark">B</span> Blake Games</a>
+        <span class="nav-status"><i></i> New games coming soon</span>
+      </nav>
+
+      <section class="hero" aria-labelledby="page-title">
+        <p class="eyebrow">LEVEL SELECT</p>
+        <h1 id="page-title">Pick a game.<br /><span>Make it legendary.</span></h1>
+        <p class="intro">Welcome to Blake's arcade. Each game has its own world, characters, and high-score-worthy mayhem.</p>
+      </section>
+
+      <section aria-labelledby="games-title">
+        <div class="section-heading">
+          <h2 id="games-title">Available games</h2>
+          <span>01 / 03</span>
+        </div>
+        <div class="game-grid">
+          <article class="game-card military-mills">
+            <div class="card-art" aria-hidden="true">
+              <span class="planet p1"></span><span class="planet p2"></span><span class="spark s1">✦</span><span class="spark s2">✦</span>
+              <span class="battle-icon">⚔</span>
+            </div>
+            <div class="card-body">
+              <p class="card-number">GAME 01</p>
+              <h3>10 Military Mills</h3>
+              <p>Choose your hero, battle through strange worlds, and take on bosses in a 10 vs 10 arena.</p>
+              <a class="play-button" href="10-military-mills/index.html">Play now <span aria-hidden="true">→</span></a>
+            </div>
+          </article>
+
+          <article class="game-card nut-battle">
+            <div class="card-art nut-art" aria-hidden="true">
+              <span class="nut-cloud nc1">☁️</span><span class="nut-cloud nc2">☁️</span>
+              <span class="nut-tree">🌴</span><span class="nut-bear">🐻</span><span class="nut-drop">🥜</span>
+            </div>
+            <div class="card-body">
+              <p class="card-number">GAME 02</p>
+              <h3>Nut Battle</h3>
+              <p>Run, jump, collect nuts, and battle the bear, cowpitter, and bird bosses.</p>
+              <a class="play-button" href="https://nut-throw-catch.cedomaiori.chatgpt.site/">Play Nut Battle <span aria-hidden="true">→</span></a>
+            </div>
+          </article>
+
+          <article class="game-card spooky-time">
+            <div class="card-art spooky-art" aria-hidden="true">
+              <span class="spooky-moon">☾</span><span class="spooky-ghost">👻</span><span class="spooky-pumpkin">🎃</span><span class="spooky-bat">🦇</span>
+            </div>
+            <div class="card-body">
+              <p class="card-number">GAME 03</p>
+              <h3>Spooky Time</h3>
+              <p>Choose a Halloween costume, find the Ghosties, and defeat the spooky bosses.</p>
+              <a class="play-button" href="spooky-time/index.html">Play Spooky Time <span aria-hidden="true">→</span></a>
+            </div>
+          </article>
+
+          <article class="game-card coming-soon" aria-label="More games coming soon">
+            <div class="plus">+</div>
+            <p>Next game<br />loading…</p>
+          </article>
+        </div>
+      </section>
+    </main>
+    <footer>© Blake Games <span>•</span> Built for big adventures</footer>
+  </body>
+</html>
