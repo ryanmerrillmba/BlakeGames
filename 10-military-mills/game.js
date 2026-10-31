@@ -2635,6 +2635,7 @@ function getOpenStarPosition() {
 }
 
 function startSubLevel(world, subLvl) {
+  window.BlakeTelemetry?.track('game_start', { world, sub_level: subLvl, hero: selectedHero?.name });
   currentWorld = world;
   currentSubLevel = subLvl;
   newlyUnlockedHero = null;
@@ -2801,6 +2802,7 @@ function handleScreenClick() {
           startSubLevel(currentWorld, 1);
         } else {
           currentState = STATE.VICTORY;
+          window.BlakeTelemetry?.track('game_complete', { world: currentWorld });
           sounds.playVictory();
         }
       }

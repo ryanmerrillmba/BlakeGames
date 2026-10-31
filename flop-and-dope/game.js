@@ -37,6 +37,9 @@ const heroTypes = ['giant-dad', 'hip-p', 'tuskanty', 'among-us-ben', 'hosco', 'e
 heroTypes.forEach(type => {
     const img = new Image();
     img.src = `assets/characters/${type}.png`;
+    // Art is optional: every renderer has a sketch fallback, so never retain a
+    // broken image that Canvas would reject in drawImage().
+    img.onerror = () => { heroImages[type] = null; };
     heroImages[type] = img;
 });
 
@@ -46,6 +49,7 @@ const enemyTypes = ['dragon-wing', 'dungeon-king', 'blood-shark', 'matera', 'sta
 enemyTypes.forEach(type => {
     const img = new Image();
     img.src = `assets/enemies/${type}.png`;
+    img.onerror = () => { enemyImages[type] = null; };
     enemyImages[type] = img;
 });
 
@@ -562,7 +566,7 @@ class Player {
         ctx.translate(-cx, -cy);
 
         const img = heroImages[this.type];
-        if (img && img.complete) {
+        if (img && img.complete && img.naturalWidth > 0) {
             // Flip image horizontally if running left
             if (this.vx < -0.1) {
                 ctx.save();
@@ -3579,6 +3583,7 @@ function updateHUD() {
 }
 
 function startGame(heroType) {
+    window.BlakeTelemetry?.track('game_start', { hero: heroType, level: selectedStartLevel });
     activeHero = heroType;
     charSelectScreen.classList.remove('active');
     monsterGuideScreen.classList.remove('active');
@@ -3599,6 +3604,7 @@ function endGame() {
 
 function winGame() {
     gameRunning = false;
+    window.BlakeTelemetry?.track('game_complete', { level: selectedStartLevel });
     alert("🌟 Huzzah! You beat Blood Shark Boss and completed Flope & Dope! You saved the day! 🌟");
     backToMenu();
 }

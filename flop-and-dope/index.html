@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-game="flop-and-dope">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,16 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=Patrick+Hand&display=swap" rel="stylesheet">
-    <script>
-        window.addEventListener('error', function(e) {
-            fetch('/log-error?msg=' + encodeURIComponent(e.message + ' at ' + e.filename + ':' + e.lineno + ':' + e.colno));
-            alert("JS Error: " + e.message + "\nAt: " + e.filename + ":" + e.lineno + ":" + e.colno);
-        });
-        window.addEventListener('unhandledrejection', function(e) {
-            fetch('/log-error?msg=' + encodeURIComponent('Promise rejection: ' + e.reason));
-            alert("Promise rejection: " + e.reason);
-        });
-    </script>
+    <script defer src="../telemetry.js"></script>
 </head>
 <body>
     <div class="notebook-container">

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-game="spooky-time">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -25,6 +25,7 @@
     .costume.selected { background:#55d38b; color:#20152f; border-color:#a7ffca; }
     .tiny { font-size:.85rem; opacity:.85; }
   </style>
+  <script defer src="../telemetry.js"></script>
 </head>
 <body>
 <main>
@@ -44,7 +45,7 @@ let player, items, well, won, message, last=0, gameStarted=false, selectedCostum
 const costumes={zombie:'🧟 Zombie',pumpkin:'🎃 Pumpkin',skeleton:'💀 Skeleton',frankenstein:'🧟‍♂️ Frankenstein',rat:'🐀 Rat',jackolantern:'🎃 Jack-o’-Lantern',spider:'🕷️ Spider',werewolf:'🐺 Werewolf',vampire:'🧛 Vampire',witch:'🧙 Witch'};
 const costumeColors={zombie:'#65d57b',pumpkin:'#e58a35',skeleton:'#e8e2cf',frankenstein:'#6eb879',rat:'#9c849e',jackolantern:'#ff9b39',spider:'#8b6ad9',werewolf:'#a797a1',vampire:'#b75ca8',witch:'#8264d9'};
 Object.entries(costumes).forEach(([key,label])=>{let b=document.createElement('button');b.className='costume';b.dataset.costume=key;b.textContent=label;b.style.borderColor=costumeColors[key];b.onclick=()=>{selectedCostume=key;document.querySelectorAll('.costume').forEach(x=>x.classList.toggle('selected',x===b));};costumeButtons.appendChild(b);});
-document.querySelector('.costume').classList.add('selected');document.querySelector('#startGame').onclick=()=>{gameStarted=true;costumeBox.style.display='none';reset();};
+document.querySelector('.costume').classList.add('selected');document.querySelector('#startGame').onclick=()=>{gameStarted=true;window.BlakeTelemetry?.track('game_start',{costume:selectedCostume});costumeBox.style.display='none';reset();};
 const walls=[{x:65,y:120,w:155,h:24},{x:270,y:105,w:120,h:24},{x:450,y:125,w:190,h:24},{x:700,y:105,w:135,h:24},{x:115,y:205,w:210,h:24},{x:385,y:205,w:145,h:24},{x:600,y:220,w:220,h:24},{x:55,y:285,w:155,h:24},{x:270,y:305,w:175,h:24},{x:505,y:295,w:125,h:24},{x:690,y:300,w:155,h:24},{x:180,y:410,w:160,h:24},{x:430,y:425,w:190,h:24},{x:230,y:65,w:24,h:170},{x:335,y:150,w:24,h:145},{x:545,y:65,w:24,h:170},{x:725,y:165,w:24,h:155},{x:85,y:345,w:24,h:95},{x:465,y:335,w:24,h:110},{x:250,y:370,w:24,h:60},{x:380,y:375,w:24,h:58},{x:585,y:365,w:24,h:70}];
 const names=['Ghosty','King of Cobras','Blood Giant','Stutman','Corrupt O','King Dragon','Corrupt Slug','The Weird Ditcher','Bunny Stickman','Sea Well'];
 addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true; if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase()))e.preventDefault();});
@@ -108,7 +109,7 @@ function bossUnlocked(rank){let defeated=items.filter(i=>i.hostile&&i.got).lengt
 function startGhostHunt(){player.level=2;player.weapon=false;player.superWeapon=false;player.ghostCount=0;player.x=start.x;player.y=start.y;items.filter(i=>i.kind==='ghost').forEach((g,n)=>{g.got=false;g.x=80+(n%4)*220;g.y=95+Math.floor(n/4)*170;});message='LEVEL 2: The Ghosties scattered! Catch them all for the diamond sword.';updateScore();}
   function loop(t){if(!gameStarted){requestAnimationFrame(loop);return;}let dt=t-last;last=t;move();player.hurtCooldown=Math.max(0,player.hurtCooldown-1);items.forEach(i=>{if(!isActive(i))return;if(i.got){if(i.kind==='ghost'){let a=i.followSlot*.9+1;i.x=player.x+Math.cos(a)*42;i.y=player.y+Math.sin(a)*28-30;}return;}wander(i);});wanderWell();drawBg();drawWell();drawWellPokers();items.forEach(drawItem);drawPlayer();let hit=Math.hypot(player.x-well.x,player.y-well.y)<player.r+well.r;if(hit&&!well.defeated&&bossUnlocked(6)){if(player.weapon){well.defeated=true;message='The diamond sword defeated the Poison Sea Well!';updateScore();}else if(player.hurtCooldown===0){player.hp=Math.max(1,player.hp-1);player.hurtCooldown=45;player.x=start.x;player.y=start.y;message='The Poison Sea Well took one heart!';updateScore();}}
   items.forEach(i=>{if(!isActive(i)||i.got)return;let d=Math.hypot(player.x-i.x,player.y-i.y);if(i.kind==='ghost'&&d<42){i.got=true;player.helper=true;player.ghostCount++;if(player.ghostCount>=8){player.superWeapon=true;player.weapon=true;message='All 8 Ghosties gave you the DIAMOND SWORD!';}else{message=`Ghosty caught! ${8-player.ghostCount} more for the diamond sword.`;}updateScore();}else if(i.hostile&&d<45&&bossUnlocked(i.bossRank)){if(player.weapon){i.got=true;message=`${player.superWeapon?'DIAMOND SWORD':'STARTER WEAPON'} defeated ${i.name}!`;updateScore();if(i.kind==='cobra')startGhostHunt();}else if(player.hurtCooldown===0){player.hp=Math.max(1,player.hp-1);player.hurtCooldown=45;player.x=start.x;player.y=start.y;message=`${i.name} took one heart!`;updateScore();}}});
-  if(player.hp<=0){player.hp=15;message='You lost all your hearts! Back to the start!';player.x=start.x;player.y=start.y;updateScore();}if(items.filter(i=>i.hostile&&!i.got).length===0&&well.defeated){won=true;message='YOU DID IT! You beat every boss!';}ctx.fillStyle='#20152fdd';ctx.fillRect(20,H-52,W-40,36);text(message,W/2,H-27,18,won?'#ffd36a':'#fff6d9');requestAnimationFrame(loop)}
+  if(player.hp<=0){player.hp=15;message='You lost all your hearts! Back to the start!';player.x=start.x;player.y=start.y;updateScore();}if(!won&&items.filter(i=>i.hostile&&!i.got).length===0&&well.defeated){won=true;window.BlakeTelemetry?.track('game_complete',{costume:selectedCostume});message='YOU DID IT! You beat every boss!';}ctx.fillStyle='#20152fdd';ctx.fillRect(20,H-52,W-40,36);text(message,W/2,H-27,18,won?'#ffd36a':'#fff6d9');requestAnimationFrame(loop)}
 reset();requestAnimationFrame(loop);
 </script>
 </body>
