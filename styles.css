@@ -17,6 +17,12 @@ h1 span { color: var(--yellow); }
 h2 { margin: 0; font-size: 1.7rem; } .section-heading span { color: #a79bbd; font-size: .8rem; }
 .game-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr); gap: 22px; margin-top: 21px; }
 .game-card { border: 1px solid rgba(255,255,255,.18); border-radius: 24px; overflow: hidden; }
+.flop-dope { background: #3d3158; box-shadow: 0 14px 40px #0006; }
+.flop-art { background: linear-gradient(145deg, #73c8ff 0%, #f7d87d 58%, #fa8f9d 100%); }
+.flop-art img { position: absolute; left: 23%; bottom: -6px; width: 145px; height: 175px; object-fit: contain; filter: drop-shadow(5px 6px 0 rgba(37, 29, 60, .35)); }
+.flop-sun { position: absolute; top: 17px; right: 17%; color: #fff8bf; font-size: 3rem; }
+.flop-cloud { position: absolute; left: 15%; top: 34px; color: #fff; font-size: 3.2rem; opacity: .8; }
+.flop-star { position: absolute; right: 32%; bottom: 32px; color: #fff8bf; font-size: 1.8rem; }
 .military-mills { background: #252040; box-shadow: 0 14px 40px #0004; }
 .card-art { position: relative; height: 210px; overflow: hidden; background: linear-gradient(135deg, #6c42bd 0%, #e76092 58%, #ffba50 100%); }
 .nut-battle { background: #234a42; box-shadow: 0 14px 40px #0004; }
@@ -24,6 +30,7 @@ h2 { margin: 0; font-size: 1.7rem; } .section-heading span { color: #a79bbd; fon
 .nut-cloud { position: absolute; font-size: 2.3rem; opacity: .75; }.nc1 { left: 12%; top: 17px; }.nc2 { right: 14%; top: 48px; font-size: 1.8rem; }
 .nut-tree { position: absolute; left: 13%; bottom: -12px; font-size: 6rem; }.nut-bear { position: absolute; right: 15%; bottom: 7px; font-size: 6.2rem; filter: drop-shadow(4px 5px 0 #3b251d); }.nut-drop { position: absolute; left: 43%; top: 36px; font-size: 2.2rem; animation: nutDrop 1.5s ease-in-out infinite; }@keyframes nutDrop { 50% { transform: translateY(60px) rotate(25deg); } }
 .spooky-time { background: #211936; box-shadow: 0 14px 40px #0006; }.spooky-art { background: linear-gradient(#17152d 0 62%, #3e2750 62%); }.spooky-moon { position:absolute; top:18px; right:18%; color:#ffd36a; font-size:5rem; }.spooky-ghost { position:absolute; left:18%; bottom:12px; font-size:5.8rem; filter:drop-shadow(4px 5px 0 #151027); }.spooky-pumpkin { position:absolute; right:18%; bottom:12px; font-size:4.4rem; }.spooky-bat { position:absolute; top:42px; left:46%; font-size:2.2rem; }
+.build-survive { background: #213b3c; box-shadow: 0 14px 40px #0006; }.survive-art { background: linear-gradient(#101e2c 0 58%, #304d45 58%); }.survive-moon { position:absolute; top:12px; right:18%; color:#ffd36a; font-size:5rem; }.survive-shelter { position:absolute; left:16%; bottom:7px; font-size:6.5rem; filter:drop-shadow(4px 5px 0 #172d2d); }.survive-fire { position:absolute; right:25%; bottom:14px; font-size:4.2rem; }.survive-skull { position:absolute; top:35px; left:48%; color:#f5e6bf; font-size:2.5rem; transform:rotate(-12deg); }
 .planet { position: absolute; border-radius: 50%; border: 6px solid rgba(18,16,30,.4); }.p1 { width: 170px; height: 170px; bottom: -58px; left: 9%; background: #69d6ab; box-shadow: inset -22px -16px #31a17d; }.p2 { width: 90px; height: 90px; top: -25px; right: 11%; background: var(--yellow); box-shadow: inset -15px -10px #eb9a46; }
 .spark { position: absolute; color: #fff9bc; font-size: 32px; }.s1 { top: 28px; left: 39%; }.s2 { right: 36%; bottom: 30px; font-size: 21px; }.battle-icon { position: absolute; right: 19%; bottom: 14px; font-size: 78px; color: var(--paper); text-shadow: 4px 5px 0 #3a225f; transform: rotate(-15deg); }
 .card-body { padding: 24px; }.card-body h3 { margin: 6px 0 8px; font-size: 2rem; }.card-body > p:not(.card-number) { color: #cfc6df; line-height: 1.45; margin: 0 0 22px; max-width: 530px; }
