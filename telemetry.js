@@ -24,29 +24,37 @@
     else queue.push({ name, payload });
   }
 
-  function script(src, onload) {
+  function script(src, onload, onerror) {
     const node = document.createElement('script');
     node.src = src;
     node.async = true;
     node.crossOrigin = 'anonymous';
     node.onload = onload;
-    node.onerror = () => console.warn(`Telemetry dependency unavailable: ${src}`);
+    node.onerror = () => {
+      console.warn(`Telemetry dependency unavailable: ${src}`);
+      onerror?.();
+    };
     document.head.appendChild(node);
   }
 
   function startAnalytics() {
     if (!isProduction || analyticsLoaded) return;
+    const verificationRun = new URLSearchParams(location.search).has('analytics-test');
     analyticsLoaded = true;
     window.dataLayer = window.dataLayer || [];
     window.gtag = window.gtag || function gtag(){ window.dataLayer.push(arguments); };
     window.gtag('js', new Date());
     window.gtag('config', measurementId, {
-      send_page_view: false,
-      anonymize_ip: true,
-      transport_type: 'beacon'
+      anonymize_ip: true
     });
-    script(`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`);
-    emit('page_view', { page_title: document.title, page_location: location.href });
+    script(
+      `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`,
+      () => {
+        // This event is deliberately sent only after gtag.js has loaded. It gives
+        // a one-time, unambiguous check that the production tag can send data.
+        if (verificationRun) emit('analytics_verification', { source: 'tag_loaded' });
+      }
+    );
     if (pageName !== 'landing') emit('game_start', { entry: 'page_load' });
   }
 
