@@ -11,7 +11,8 @@ permissions:
 
 jobs:
   browser-tests:
-    runs-on: ubuntu-latest
+    # Playwright 1.55 has no Ubuntu 26.04 dependency installer.
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4

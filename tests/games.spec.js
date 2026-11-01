@@ -11,11 +11,24 @@ async function blockThirdParties(page) {
   await page.route(/googletagmanager|sentry-cdn|\.ingest\.us\.sentry\.io/, (route) => route.fulfill({ status: 204, body: '' }));
 }
 
-test('landing page exposes all five game choices and preserves the outbound game', async ({ page }) => {
+test('landing page exposes only the five real playable games and required homepage copy', async ({ page }) => {
   await blockThirdParties(page);
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Available games' })).toBeVisible();
-  await expect(page.locator('.game-card')).toHaveCount(6);
+  await expect(page.getByText('Last updated October 31, 2026')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pick a game and start playing.' })).toBeVisible();
+  await expect(page.getByText("Welcome to Blake's Arcade. Each game has its own world, characters, and challenges.")).toBeVisible();
+  await expect(page.locator('.game-card')).toHaveCount(5);
+  await expect(page.locator('.coming-soon')).toHaveCount(0);
+  await expect(page.getByText(/Next game\s*loading/i)).toHaveCount(0);
+  await expect(page.locator('.plus')).toHaveCount(0);
+  await expect(page.locator('.game-card h3')).toHaveText([
+    'Flope & Dope',
+    '10 Military Mills',
+    'Nut Battle',
+    'Spooky Time',
+    'Build to Survive Apocalypse',
+  ]);
   await expect(page.locator('a[href="flop-and-dope/index.html"]')).toBeVisible();
   await expect(page.locator('a[href="10-military-mills/index.html"]')).toBeVisible();
   await expect(page.locator('a[href="spooky-time/index.html"]')).toBeVisible();
