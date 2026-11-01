@@ -3,6 +3,7 @@ const { test, expect } = require('@playwright/test');
 const localGames = [
   ['/flop-and-dope/', 'Flope & Dope'],
   ['/10-military-mills/', '10 vs 10'],
+  ['/nut-throw-catch/', 'Nut Throw Catch'],
   ['/spooky-time/', 'Spooky Time'],
   ['/build-to-survive-apocalypse/', 'Build to Survive'],
 ];
@@ -25,7 +26,7 @@ test('landing page exposes only the five real playable games and required homepa
   await expect(page.locator('.game-card h3')).toHaveText([
     'Flope & Dope',
     '10 Military Mills',
-    'Nut Battle',
+    'Nut Throw Catch',
     'Spooky Time',
     'Build to Survive Apocalypse',
   ]);
@@ -33,7 +34,7 @@ test('landing page exposes only the five real playable games and required homepa
   await expect(page.locator('a[href="10-military-mills/index.html"]')).toBeVisible();
   await expect(page.locator('a[href="spooky-time/index.html"]')).toBeVisible();
   await expect(page.locator('a[href="build-to-survive-apocalypse/index.html"]')).toBeVisible();
-  await expect(page.locator('a[href^="https://nut-throw-catch"]')).toBeVisible();
+  await expect(page.locator('a[href="nut-throw-catch/index.html"]')).toBeVisible();
 });
 
 for (const [path, title] of localGames) {
@@ -45,6 +46,9 @@ for (const [path, title] of localGames) {
     await expect(page).toHaveTitle(new RegExp(title, 'i'));
     if (path === '/flop-and-dope/') {
       await expect(page.locator('#character-select-screen')).toHaveClass(/active/);
+    } else if (path === '/nut-throw-catch/') {
+      await expect(page.locator('#game')).toBeVisible();
+      await expect(page.locator('#throw')).toBeEnabled();
     } else {
       await expect(page.locator('canvas').first()).toBeVisible();
     }

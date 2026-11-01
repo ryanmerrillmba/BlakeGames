@@ -16,6 +16,11 @@ const localInteractions = {
     await canvas.click({ position: { x: 90, y: 135 } });
     await page.keyboard.press('d');
   },
+  '/nut-throw-catch/index.html': async (page) => {
+    await expect(page.locator('#game')).toBeVisible();
+    await expect(page.locator('#throw')).toBeEnabled();
+    await page.locator('#throw').click();
+  },
   '/spooky-time/index.html': async (page) => {
     await page.locator('[data-costume="witch"]').click();
     await page.locator('#startGame').click();
