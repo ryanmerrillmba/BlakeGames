@@ -92,6 +92,11 @@ test('Nut Throw Catch includes the locked Lion boss progression and appearance c
   await expect(page.locator('#lion .lion-arm')).toHaveCount(2);
   await expect(page.locator('#lion .lion-leg')).toHaveCount(2);
   await expect(page.locator('#lion .lion-tail')).toBeAttached();
+  await expect(page.locator('#lion .lion-tail-tip')).toBeAttached();
+  const lionFace = page.locator('#lion .lion-head');
+  await expect(lionFace).toHaveCSS('background-color', 'rgb(211, 154, 85)');
+  const greenCheek = await lionFace.evaluate((element) => getComputedStyle(element, '::before').backgroundColor);
+  expect(greenCheek).toBe('rgb(145, 179, 107)');
   await expect(page.locator('#lionChoice')).toBeAttached();
   await expect(page.locator('[data-lion-look]')).toHaveCount(3);
   await page.locator('#levelsBtn').click();

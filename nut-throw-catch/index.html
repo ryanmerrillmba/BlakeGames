@@ -212,7 +212,7 @@ const game=document.querySelector('#game'),hero=document.querySelector('#hero'),
   .lion-leg{position:absolute;top:184px;width:38px;height:58px;background:#8da35c;border:5px solid #3b251d;border-radius:20px;z-index:2}.lion-leg.left{left:57px}.lion-leg.right{right:57px}
   .lion-paw{position:absolute;bottom:-13px;left:-7px;width:48px;height:35px;background:#c89455;border:4px solid #3b251d;border-radius:50%}
   .lion-arm{position:absolute;top:111px;width:42px;height:86px;background:#8da35c;border:5px solid #3b251d;border-radius:28px;z-index:3}.lion-arm.left{left:15px;transform:rotate(22deg)}.lion-arm.right{right:15px;transform:rotate(-22deg)}
-  .lion-tail{position:absolute;right:0;bottom:55px;width:72px;height:100px;border:12px solid #8da35c;border-left:0;border-bottom:0;border-radius:0 60px 0 0;transform:rotate(12deg);z-index:0}.lion-tail:after{content:"";position:absolute;right:-15px;top:-13px;width:32px;height:32px;background:#b96d35;border:5px solid #3b251d;border-radius:50%}
+  .lion-tail{position:absolute;right:-4px;bottom:49px;width:78px;height:110px;border:12px solid #8da35c;border-left:0;border-bottom:0;border-radius:0 68px 45px 0;transform:rotate(8deg);z-index:0}.lion-tail-tip{position:absolute;right:-15px;top:-16px;width:34px;height:29px;background:#b96d35;border:5px solid #3b251d;border-radius:62% 48% 58% 44%;transform:rotate(18deg)}
   .lion-stage2 .lion-leg,.lion-stage2 .lion-paw{background:#4f9d58}
   .lion-stage2 .lion-body{background:#789653}
   .lion-stage3 .lion-body{background:#84935b}
@@ -225,7 +225,7 @@ const game=document.querySelector('#game'),hero=document.querySelector('#hero'),
 <script>
   let lionStage=1,lionLook='lion-sage',lionUnlocked=false,lionChoicePending=false;
   game.insertAdjacentHTML('beforeend', `<div class="boss lion" id="lion" aria-label="Lion boss">
-    <div class="lion-tail"></div><div class="lion-mane"></div><div class="lion-head"><i class="lion-ear left"></i><i class="lion-ear right"></i><i class="lion-eye left"></i><i class="lion-eye right"></i><i class="lion-muzzle"></i></div>
+    <div class="lion-tail"><i class="lion-tail-tip"></i></div><div class="lion-mane"></div><div class="lion-head"><i class="lion-ear left"></i><i class="lion-ear right"></i><i class="lion-eye left"></i><i class="lion-eye right"></i><i class="lion-muzzle"></i></div>
     <div class="lion-body"><div class="lion-belly"></div></div><div class="lion-arm left"></div><div class="lion-arm right"></div><div class="lion-leg left"><i class="lion-paw"></i></div><div class="lion-leg right"><i class="lion-paw"></i></div>
   </div><div class="modal lion-choice" id="lionChoice" role="dialog" aria-modal="true" aria-labelledby="lionChoiceTitle"><h2 id="lionChoiceTitle">🦁 Choose the Lion's Look</h2><p>The lion cannot be fully green. Pick a mane and body style for the third encounter.</p><div class="lion-choice-grid"><button class="choice-gold" data-lion-look="lion-gold"><strong>Golden Mane</strong><small>Warm mane, green paws</small></button><button class="choice-forest" data-lion-look="lion-forest"><strong>Forest Tips</strong><small>Brown mane, green body</small></button><button class="choice-sunset" data-lion-look="lion-sunset"><strong>Sunset Lion</strong><small>Red mane, green paws</small></button></div></div>`);
   const lion=document.querySelector('#lion'),lionChoice=document.querySelector('#lionChoice');
@@ -245,10 +245,10 @@ const game=document.querySelector('#game'),hero=document.querySelector('#hero'),
 </script>
 <style>
   /* Lion progression: green face first, green legs after one win, green accents after two. */
-  .lion-head{background:#91b36b}.lion-muzzle{background:#d7bd88}
-  .lion-body,.lion-arm,.lion-leg{background:#b8814d}.lion-tail{border-color:#b8814d}.lion-tail:after{background:#b96d35}
-  .lion-stage2 .lion-leg,.lion-stage2 .lion-paw{background:#4f9d58}.lion-stage2 .lion-body{background:#a8844f}
-  .lion-stage3 .lion-head{background:#78a864}.lion-stage3 .lion-body,.lion-stage3 .lion-arm{background:#789653}.lion-stage3 .lion-leg,.lion-stage3 .lion-paw{background:#4f9d58}.lion-stage3 .lion-tail{border-color:#789653}
+  .lion-head{background:#d39a55}.lion-head:before{content:"";position:absolute;left:8px;bottom:17px;width:20px;height:17px;background:#91b36b;border:2px solid #567c4d;border-radius:58% 42% 54% 46%;opacity:.95}.lion-muzzle{background:#d7bd88}
+  .lion-body,.lion-arm,.lion-leg{background:#b8814d}.lion-tail{border-color:#b8814d}.lion-tail-tip{background:#b96d35}
+  .lion-stage2 .lion-head:before{width:25px;height:19px}.lion-stage2 .lion-leg,.lion-stage2 .lion-paw{background:#4f9d58}.lion-stage2 .lion-body{background:#a8844f}
+  .lion-stage3 .lion-head{background:#c88e58}.lion-stage3 .lion-head:before{width:30px;height:22px;background:#78a864}.lion-stage3 .lion-body,.lion-stage3 .lion-arm{background:#789653}.lion-stage3 .lion-leg,.lion-stage3 .lion-paw{background:#4f9d58}.lion-stage3 .lion-tail{border-color:#789653}.lion-stage3 .lion-tail-tip{background:#6f8f52}
   .lion-level2 .lion-mane{background:#c27b38}.lion-level3 .lion-mane{background:#d29c39}.lion-level4 .lion-eye{background:#ffd34d;box-shadow:0 0 8px 2px #ffd34d}.lion-level5 .lion-mane{background:#9f5b37}.lion-level6 .lion-mane{background:#7b5a45}.lion-level7 .lion-mane{background:#a84e3d}.lion-level8 .lion-mane{background:#6e6247}.lion-level9 .lion-mane{background:#4e493d}.lion-level9 .lion-eye{background:#b7ff55;box-shadow:0 0 9px 2px #b7ff55}
   .lion-arm{transform-origin:50% 12px;animation:lionArmLeft .82s ease-in-out infinite alternate}.lion-arm.right{animation-name:lionArmRight;animation-delay:-.41s}
   .lion-leg{transform-origin:50% 8px;animation:lionStep .58s ease-in-out infinite alternate}.lion-leg.right{animation-delay:-.29s}
