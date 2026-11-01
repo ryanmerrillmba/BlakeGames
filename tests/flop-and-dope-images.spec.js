@@ -12,6 +12,21 @@ test('Flop and Dope renders complete artwork at a readable size', async ({ page 
       renderedWidth: box.width,
       renderedHeight: box.height,
       complete: image.complete,
+      lowerVisiblePixels: (() => {
+        const canvas = document.createElement('canvas');
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        const context = canvas.getContext('2d');
+        context.drawImage(image, 0, 0);
+        const pixels = context.getImageData(0, Math.floor(canvas.height * 0.55), canvas.width, Math.ceil(canvas.height * 0.45)).data;
+        let visible = 0;
+        for (let index = 0; index < pixels.length; index += 4) {
+          const alpha = pixels[index + 3];
+          const colorTotal = pixels[index] + pixels[index + 1] + pixels[index + 2];
+          if (alpha > 20 && (alpha < 245 || colorTotal < 735)) visible += 1;
+        }
+        return visible;
+      })(),
     };
   }));
 
@@ -27,5 +42,6 @@ test('Flop and Dope renders complete artwork at a readable size', async ({ page 
     expect(image.naturalHeight, `${image.alt} is missing or low-resolution`).toBeGreaterThanOrEqual(512);
     expect(image.renderedWidth, `${image.alt} is rendered too narrowly`).toBeGreaterThanOrEqual(100);
     expect(image.renderedHeight, `${image.alt} is rendered too short`).toBeGreaterThanOrEqual(100);
+    expect(image.lowerVisiblePixels, `${image.alt} contains only the upper part of the artwork`).toBeGreaterThan(50);
   }
 });
