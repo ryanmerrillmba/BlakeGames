@@ -2,7 +2,6 @@
   'use strict';
 
   const measurementId = 'G-HERDRBQDXN';
-  const analyticsEnabled = location.hostname === 'blakegames.pages.dev';
   // A DSN is a public client identifier, not an auth token. Static Pages code
   // needs it at runtime to report browser faults without build-time secrets.
   const sentryDsn = 'https://42b1f53e8f6f353e4975b2207dd25944@o4512352222576640.ingest.us.sentry.io/4512352378028032';
@@ -17,7 +16,7 @@
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({ event: name, ...payload });
     window.dispatchEvent(new CustomEvent('blakegames:telemetry', { detail: { name, payload } }));
-    if (analyticsEnabled && loaded && typeof window.gtag === 'function') window.gtag('event', name, payload);
+    if (loaded && typeof window.gtag === 'function') window.gtag('event', name, payload);
     if (sentryReady && window.Sentry) window.Sentry.addBreadcrumb({ category: 'game', message: name, data: payload, level: 'info' });
     else queue.push({ name, payload });
   }
@@ -35,19 +34,17 @@
   function loadTelemetry() {
     if (loaded) return;
     loaded = true;
-    if (analyticsEnabled) {
-      window.dataLayer = window.dataLayer || [];
-      window.gtag = window.gtag || function gtag(){ window.dataLayer.push(arguments); };
-      window.gtag('js', new Date());
-      window.gtag('consent', 'default', { analytics_storage: 'denied', ad_storage: 'denied' });
-      window.gtag('config', measurementId, { send_page_view: false, anonymize_ip: true, transport_type: 'beacon' });
-      script(`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`);
-    }
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function gtag(){ window.dataLayer.push(arguments); };
+    window.gtag('js', new Date());
+    window.gtag('consent', 'default', { analytics_storage: 'denied', ad_storage: 'denied' });
+    window.gtag('config', measurementId, { send_page_view: false, anonymize_ip: true, transport_type: 'beacon' });
+    script(`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`);
     script('https://browser.sentry-cdn.com/8.55.0/bundle.tracing.replay.min.js', () => {
       if (!window.Sentry) return;
       window.Sentry.init({
         dsn: sentryDsn,
-        environment: location.hostname === 'dev.blakegames.pages.dev' ? 'development' : 'production',
+        environment: location.hostname.endsWith('.pages.dev') ? 'development' : 'production',
         release,
         tracesSampleRate: 0,
         replaysSessionSampleRate: 0,
@@ -63,8 +60,8 @@
         window.Sentry.captureMessage('BlakeGames telemetry verification', { level: 'warning', tags: { verification: 'true', game: pageName } });
       }
     });
-    if (analyticsEnabled) emit('page_view', { page_title: document.title, page_location: location.href });
-    if (analyticsEnabled && pageName !== 'landing') emit('game_start', { entry: 'first_interaction' });
+    emit('page_view', { page_title: document.title, page_location: location.href });
+    if (pageName !== 'landing') emit('game_start', { entry: 'first_interaction' });
   }
 
   ['pointerdown', 'keydown', 'touchstart'].forEach((event) => window.addEventListener(event, loadTelemetry, { once: true, passive: event !== 'keydown' }));
@@ -76,5 +73,5 @@
     emit('game_error', { message: String(event.reason || 'Unhandled rejection'), source: 'unhandledrejection' });
     if (sentryReady && window.Sentry) window.Sentry.captureException(event.reason);
   });
-  window.BlakeTelemetry = { activate: loadTelemetry, track: emit, config: { measurementId, sentryDsn, pageName, release, analyticsEnabled } };
+  window.BlakeTelemetry = { activate: loadTelemetry, track: emit, config: { measurementId, sentryDsn, pageName, release } };
 })();
