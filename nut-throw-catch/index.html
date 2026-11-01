@@ -22,6 +22,46 @@ const game=document.querySelector('#game'),hero=document.querySelector('#hero'),
   .cater5 .caterHead,.cater5 .seg,.cater5 .seg:after{background:#263344;border-color:#0b111a}.cater5 .caterEye{background:#ffb22e;border-color:#ffb22e;box-shadow:0 0 10px #ffb22e}
   .bird5 .birdBody,.bird5 .birdHead,.bird5 .birdLeg{background:#202b3b;border-color:#0b111a}.bird5 .birdEye{background:#ffb22e;border-color:#ffb22e;box-shadow:0 0 9px #ffb22e}
 </style>
+
+<style>
+  .nut.yellow,.shot.yellow{background:#ffd447;border-color:#a87413;box-shadow:inset -4px -3px 0 #e0a51e,0 0 8px #ffe78c}
+  .nut.blue,.shot.blue{background:#55a9ff;border-color:#1d5c9f;box-shadow:inset -4px -3px 0 #2c78c8,0 0 8px #9bd3ff}
+  #nutGuideBtn{background:#f7d35f}
+  .nut-guide{color:#2a2025;text-align:left}
+  .nut-guide h2{margin:0 0 5px;color:#633c29}
+  .nut-guide p{margin:6px 0 12px;font-weight:700;line-height:1.35}
+  .nut-guide-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 14px;padding:0;list-style:none}
+  .nut-guide-list li{border:2px solid #633c29;border-radius:10px;background:#fff;padding:8px;font-size:.82rem;line-height:1.25}
+  .nut-guide-list strong{display:block;font-size:1rem;margin-bottom:3px}
+  .nut-swatch{display:inline-block;width:14px;height:14px;margin-right:4px;border:2px solid #633c29;border-radius:50%;vertical-align:-2px}
+  .swatch-brown{background:#9b623d}.swatch-red{background:#e33c48}.swatch-yellow{background:#ffd447}.swatch-blue{background:#55a9ff}.swatch-ice{background:#bfeeff}.swatch-fire{background:#f04c1e}.swatch-green{background:#39a84c}.swatch-moss{background:#66783a}.swatch-black{background:#111}
+  @media(max-width:560px){.nut-guide-list{grid-template-columns:1fr}}
+</style>
+<script>
+  // The guide is added after the original game markup so it works across all levels.
+  game.insertAdjacentHTML('beforeend', `<div class="modal nut-guide" id="nutGuide" role="dialog" aria-modal="true" aria-labelledby="nutGuideTitle">
+    <h2 id="nutGuideTitle">🥜 Nut Guide</h2>
+    <p>Collect a nut, then press <strong>Throw Nut</strong>. Yellow and blue nuts are special nuts you can collect from the marked trees.</p>
+    <ul class="nut-guide-list">
+      <li><strong><span class="nut-swatch swatch-brown"></span>Brown</strong>Basic nut. Knock the palm tree or collect a falling one.</li>
+      <li><strong><span class="nut-swatch swatch-red"></span>Red</strong>Red boss-stage nut for the Caterpillar.</li>
+      <li><strong><span class="nut-swatch swatch-yellow"></span>Yellow</strong>Special Bear nut. Unlock the yellow tree in Level 2.</li>
+      <li><strong><span class="nut-swatch swatch-blue"></span>Blue</strong>Special Bear nut. Find it at the blue tree in Level 3 and later.</li>
+      <li><strong><span class="nut-swatch swatch-ice"></span>Ice</strong>Caterpillar Level 2 nut with an icy look.</li>
+      <li><strong><span class="nut-swatch swatch-fire"></span>Fire</strong>Caterpillar Level 3 nut with a fiery look.</li>
+      <li><strong><span class="nut-swatch swatch-green"></span>Green</strong>Bird-stage nut used in the early Bird levels.</li>
+      <li><strong><span class="nut-swatch swatch-moss"></span>Moss</strong>Bird Level 2 nut with a wrapped, earthy look.</li>
+      <li><strong><span class="nut-swatch swatch-black"></span>Black</strong>Bird Level 3 and final-stage nut.</li>
+    </ul>
+    <button id="closeNutGuide" type="button">Close Guide</button>
+  </div>`);
+  document.querySelector('#nutGuideBtn')?.remove();
+  document.querySelector('.hud').insertAdjacentHTML('beforeend', '<button id="nutGuideBtn" type="button">Nut Guide</button>');
+  const nutGuide=document.querySelector('#nutGuide');
+  document.querySelector('#nutGuideBtn').onclick=()=>{nutGuide.style.display='block'};
+  document.querySelector('#closeNutGuide').onclick=()=>{nutGuide.style.display='none'};
+  window.addEventListener('keydown',event=>{if(event.key==='Escape')nutGuide.style.display='none'});
+</script>
 <style>
   /* Bear level 4 ears should be black too. */
   .stage4 .ear{background:#111;border-color:#060606}
@@ -146,4 +186,3 @@ const game=document.querySelector('#game'),hero=document.querySelector('#hero'),
   .cater5 .caterHead,.cater5 .seg,.cater5 .seg:after{background:#263344;border-color:#0b111a}.cater5 .caterEye{background:#ffb22e;border-color:#ffb22e;box-shadow:0 0 10px #ffb22e}
   .bird5 .birdBody,.bird5 .birdHead,.bird5 .birdLeg{background:#202b3b;border-color:#0b111a}.bird5 .birdEye{background:#ffb22e;border-color:#ffb22e;box-shadow:0 0 9px #ffb22e}
 </style>
-

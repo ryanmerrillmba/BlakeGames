@@ -49,6 +49,11 @@ for (const [path, title] of localGames) {
     } else if (path === '/nut-throw-catch/') {
       await expect(page.locator('#game')).toBeVisible();
       await expect(page.locator('#throw')).toBeEnabled();
+      await expect(page.locator('#nutGuideBtn')).toBeVisible();
+      await page.locator('#nutGuideBtn').click();
+      await expect(page.locator('#nutGuide')).toBeVisible();
+      await expect(page.getByText('Yellow', { exact: true })).toBeVisible();
+      await expect(page.getByText('Blue', { exact: true })).toBeVisible();
     } else {
       await expect(page.locator('canvas').first()).toBeVisible();
     }

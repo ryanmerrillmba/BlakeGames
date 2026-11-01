@@ -19,6 +19,9 @@ const localInteractions = {
   '/nut-throw-catch/index.html': async (page) => {
     await expect(page.locator('#game')).toBeVisible();
     await expect(page.locator('#throw')).toBeEnabled();
+    await expect(page.locator('#nutGuideBtn')).toBeVisible();
+    await page.locator('#nutGuideBtn').click();
+    await expect(page.locator('#nutGuide')).toBeVisible();
     await page.locator('#throw').click();
   },
   '/spooky-time/index.html': async (page) => {
