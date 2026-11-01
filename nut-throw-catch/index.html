@@ -186,3 +186,17 @@ const game=document.querySelector('#game'),hero=document.querySelector('#hero'),
   .cater5 .caterHead,.cater5 .seg,.cater5 .seg:after{background:#263344;border-color:#0b111a}.cater5 .caterEye{background:#ffb22e;border-color:#ffb22e;box-shadow:0 0 10px #ffb22e}
   .bird5 .birdBody,.bird5 .birdHead,.bird5 .birdLeg{background:#202b3b;border-color:#0b111a}.bird5 .birdEye{background:#ffb22e;border-color:#ffb22e;box-shadow:0 0 9px #ffb22e}
 </style>
+<script>
+  // Special Bear nuts should visibly fall during the levels where they are introduced.
+  setInterval(function(){
+    if(!live || boss!=='bear') return;
+    if(level===2){
+      yellowTree.style.display='block';
+      nut(18+Math.random()*24,'yellow');
+    }
+    if(level>=3){
+      blueTree.style.display='block';
+      nut(58+Math.random()*22,'blue');
+    }
+  },2400);
+</script>
