@@ -83,11 +83,12 @@ test('Flop & Dope shows the Nippin dungeon guide without retired characters', as
 
   await page.locator('#tab-guide').click();
   await expect(page.locator('.guide-card h3')).toHaveText([
-    'Poster (World 1 Boss)',
+    'Booster (First Boss)',
     'Nippins',
     'Star-Shell Bug',
-    'Nippin King (World 1 Boss)',
-    'Spark-Ball',
+    'Nippin King (Second Boss)',
+    'Spark Bobbies',
+    'Madara (Boss)',
     'Blood Shark',
     'Dragon Wing',
     'Gray Pond',
@@ -95,11 +96,11 @@ test('Flop & Dope shows the Nippin dungeon guide without retired characters', as
     'Dungeon Emperor (Final Boss)',
   ]);
   await expect(page.getByText('Matera', { exact: true })).toHaveCount(0);
-  await expect(page.locator('.guide-nippin-placeholder')).toBeVisible();
-  await expect(page.locator('.guide-nippin-king-placeholder')).toBeVisible();
+  await expect(page.locator('.guide-nippin-art')).toBeVisible();
+  await expect(page.locator('.guide-nippin-king-art')).toBeVisible();
 });
 
-test('Flop & Dope starts the Nippin King dungeon level without browser errors', async ({ page }) => {
+test('Flop & Dope starts the Booster dungeon level without browser errors', async ({ page }) => {
   const failures = [];
   page.on('pageerror', (error) => failures.push(error.message));
   await blockThirdParties(page);
@@ -109,6 +110,10 @@ test('Flop & Dope starts the Nippin King dungeon level without browser errors', 
   await page.locator('#start-game-btn').click();
   await expect(page.locator('#gameplay-screen')).toHaveClass(/active/);
   await page.waitForTimeout(800);
+  await page.locator('#hud-level-select').selectOption('6');
+  await page.waitForTimeout(400);
+  await page.locator('#hud-level-select').selectOption('12');
+  await page.waitForTimeout(400);
   expect(failures).toEqual([]);
 });
 

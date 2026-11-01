@@ -471,22 +471,89 @@ header {
     background: #f7f0ff;
 }
 
-.guide-nippin-placeholder {
-    color: #9b5de5;
-    font-family: Georgia, serif;
-    font-size: 8rem;
-    line-height: 1;
-    text-shadow: 3px 3px 0 #3b1f66, -1px -1px 0 #3b1f66;
+.guide-nippin-art,
+.guide-nippin-king-art {
+    position: relative;
+    width: 116px;
+    height: 116px;
+    border: 5px solid #3b1f66;
+    border-radius: 50%;
+    background: #9b5de5;
+    box-shadow: inset 10px 8px 0 rgba(255,255,255,0.18), 4px 5px 0 rgba(59,31,102,0.25);
     animation: nippin-bob 1.2s ease-in-out infinite alternate;
 }
 
-.guide-nippin-king-placeholder {
-    color: #9b5de5;
-    font-family: Georgia, serif;
-    font-size: 7rem;
-    line-height: 1;
-    text-shadow: 3px 3px 0 #3b1f66, -1px -1px 0 #3b1f66;
+.guide-nippin-art::after,
+.guide-nippin-king-art::after {
+    content: '';
+    position: absolute;
+    left: 29px;
+    right: 29px;
+    bottom: 22px;
+    height: 8px;
+    border-bottom: 4px solid #3b1f66;
+    border-radius: 50%;
 }
+
+.nippin-eye,
+.nippin-king-eye {
+    position: absolute;
+    top: 39px;
+    width: 18px;
+    height: 22px;
+    border: 3px solid #2b2b2b;
+    border-radius: 50%;
+    background: #fff;
+}
+
+.nippin-eye.left,
+.nippin-king-eye.left { left: 25px; }
+.nippin-eye.right,
+.nippin-king-eye.right { right: 25px; }
+
+.nippin-eye::after,
+.nippin-king-eye::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 6px;
+    width: 6px;
+    height: 8px;
+    border-radius: 50%;
+    background: #2b2b2b;
+}
+
+.nippin-mouth,
+.nippin-king-mouth {
+    position: absolute;
+    left: 46px;
+    top: 78px;
+    width: 20px;
+    height: 7px;
+    border-bottom: 4px solid #3b1f66;
+    border-radius: 50%;
+}
+
+.guide-nippin-king-art {
+    width: 126px;
+    height: 126px;
+    background: #8550c9;
+}
+
+.nippin-crown {
+    position: absolute;
+    z-index: 2;
+    left: 24px;
+    top: -38px;
+    color: #ffd43b;
+    font-size: 4.8rem;
+    line-height: 1;
+    font-family: Georgia, serif;
+    text-shadow: 2px 3px 0 #2b2b2b;
+}
+
+.guide-nippin-king-art .nippin-king-eye { top: 46px; }
+.guide-nippin-king-art .nippin-king-mouth { top: 87px; }
 
 .guide-nippin-minions {
     position: absolute;
