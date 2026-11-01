@@ -90,11 +90,13 @@ test('Flop & Dope shows the Nippin dungeon guide without retired characters', as
     'Madara (Boss)',
     'Blood Shark',
     'Dragon Wing',
+    'Ladybug (Boss)',
     'Gray Pond',
     'Shark Fin Hazard',
     'Dungeon Emperor (Final Boss)',
   ]);
   await expect(page.getByText('Matera', { exact: true })).toHaveCount(0);
+  await expect(page.locator('.guide-card h3').filter({ hasText: 'Worm' })).toHaveCount(0);
   await expect(page.locator('.guide-nippin-art')).toBeVisible();
   await expect(page.locator('.guide-nippin-king-art')).toBeVisible();
 });
@@ -109,16 +111,10 @@ test('Flop & Dope reaches the reordered Nippin and boss levels without browser e
   await page.locator('#start-game-btn').click();
   await expect(page.locator('#gameplay-screen')).toHaveClass(/active/);
   await page.waitForTimeout(800);
-  await page.locator('#hud-level-select').selectOption('4');
-  await page.waitForTimeout(300);
-  await page.locator('#hud-level-select').selectOption('5');
-  await page.waitForTimeout(300);
-  await page.locator('#hud-level-select').selectOption('6');
-  await page.waitForTimeout(400);
-  await page.locator('#hud-level-select').selectOption('7');
-  await page.waitForTimeout(400);
-  await page.locator('#hud-level-select').selectOption('12');
-  await page.waitForTimeout(400);
+  for (const level of ['4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24']) {
+    await page.locator('#hud-level-select').selectOption(level);
+    await page.waitForTimeout(120);
+  }
   expect(failures).toEqual([]);
 });
 
