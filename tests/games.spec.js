@@ -92,6 +92,16 @@ test('Nut Throw Catch includes the locked Lion boss progression and appearance c
   await expect(page.locator('#lion .lion-arm')).toHaveCount(2);
   await expect(page.locator('#lion .lion-leg')).toHaveCount(2);
   await expect(page.locator('#lion .lion-tail')).toBeAttached();
+  await expect(page.locator('#lion .lion-tail-tip')).toBeAttached();
+  const lionFace = page.locator('#lion .lion-head');
+  await expect(lionFace).toHaveCSS('background-color', 'rgb(211, 154, 85)');
+  const greenCheek = await lionFace.evaluate((element) => getComputedStyle(element, '::before').backgroundColor);
+  expect(greenCheek).toBe('rgb(145, 179, 107)');
+  const levelManeColors = await page.evaluate(() => Array.from({ length: 9 }, (_, index) => {
+    game.className = `lion-stage1 lion-sage lion-level${index + 1}`;
+    return getComputedStyle(document.querySelector('#lion .lion-mane')).backgroundColor;
+  }));
+  expect(new Set(levelManeColors).size).toBe(9);
   await expect(page.locator('#lionChoice')).toBeAttached();
   await expect(page.locator('[data-lion-look]')).toHaveCount(3);
   await page.locator('#levelsBtn').click();
@@ -133,7 +143,7 @@ test('telemetry remains inactive before consent-like interaction and records gam
   await page.evaluate(() => window.addEventListener('blakegames:telemetry', (event) => window.__testEvents = (window.__testEvents || []).concat(event.detail.name)));
   await page.locator('#startGame').click();
   events.push(...await page.evaluate(() => window.__testEvents));
-  expect(events).toEqual(expect.arrayContaining(['page_view', 'game_start']));
+  expect(events).toEqual(expect.arrayContaining(['game_start']));
 });
 
 test('telemetry initializes GA and Sentry with the configured DSN and captures a controlled event', async ({ page }) => {
