@@ -465,6 +465,42 @@ header {
     animation: spark-pulse 1s infinite alternate;
 }
 
+.nippin-card-icon,
+.nippin-king-card-icon {
+    position: relative;
+    background: #f7f0ff;
+}
+
+.guide-nippin-placeholder {
+    color: #9b5de5;
+    font-family: Georgia, serif;
+    font-size: 8rem;
+    line-height: 1;
+    text-shadow: 3px 3px 0 #3b1f66, -1px -1px 0 #3b1f66;
+    animation: nippin-bob 1.2s ease-in-out infinite alternate;
+}
+
+.guide-nippin-king-placeholder {
+    color: #9b5de5;
+    font-family: Georgia, serif;
+    font-size: 7rem;
+    line-height: 1;
+    text-shadow: 3px 3px 0 #3b1f66, -1px -1px 0 #3b1f66;
+}
+
+.guide-nippin-minions {
+    position: absolute;
+    bottom: 18px;
+    color: #7b3fc6;
+    font-size: 1.4rem;
+    letter-spacing: 8px;
+}
+
+@keyframes nippin-bob {
+    from { transform: translateY(4px) scale(0.96); }
+    to { transform: translateY(-4px) scale(1.04); }
+}
+
 @keyframes spark-pulse {
     0% { transform: scale(0.9) rotate(-10deg); }
     100% { transform: scale(1.1) rotate(10deg); }

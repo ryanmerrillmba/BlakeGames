@@ -74,6 +74,44 @@ test('Flop & Dope reaches gameplay after hero selection without missing-image dr
   expect(failures).toEqual([]);
 });
 
+test('Flop & Dope shows the Nippin dungeon guide without retired characters', async ({ page }) => {
+  await blockThirdParties(page);
+  await page.goto('/flop-and-dope/');
+
+  await expect(page.locator('.character-card')).toHaveCount(5);
+  await expect(page.locator('.character-card h3')).not.toContainText('Electro');
+
+  await page.locator('#tab-guide').click();
+  await expect(page.locator('.guide-card h3')).toHaveText([
+    'Poster (World 1 Boss)',
+    'Nippins',
+    'Star-Shell Bug',
+    'Nippin King (World 1 Boss)',
+    'Spark-Ball',
+    'Blood Shark',
+    'Dragon Wing',
+    'Gray Pond',
+    'Shark Fin Hazard',
+    'Dungeon Emperor (Final Boss)',
+  ]);
+  await expect(page.getByText('Matera', { exact: true })).toHaveCount(0);
+  await expect(page.locator('.guide-nippin-placeholder')).toBeVisible();
+  await expect(page.locator('.guide-nippin-king-placeholder')).toBeVisible();
+});
+
+test('Flop & Dope starts the Nippin King dungeon level without browser errors', async ({ page }) => {
+  const failures = [];
+  page.on('pageerror', (error) => failures.push(error.message));
+  await blockThirdParties(page);
+  await page.goto('/flop-and-dope/');
+  await page.locator('.character-card').first().click();
+  await page.locator('.level-select-btn[data-level="3"]').click();
+  await page.locator('#start-game-btn').click();
+  await expect(page.locator('#gameplay-screen')).toHaveClass(/active/);
+  await page.waitForTimeout(800);
+  expect(failures).toEqual([]);
+});
+
 test('Nut Throw Catch drops the yellow and blue Bear nuts in their special levels', async ({ page }) => {
   await blockThirdParties(page);
   await page.goto('/nut-throw-catch/');

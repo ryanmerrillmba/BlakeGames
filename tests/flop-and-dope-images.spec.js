@@ -36,7 +36,7 @@ test('Flop and Dope renders complete artwork at a readable size', async ({ page 
   const guideReport = await reportVisibleImages('.guide-img');
   const imageReport = [...heroReport, ...guideReport];
 
-  expect(imageReport.length).toBeGreaterThanOrEqual(12);
+  expect(imageReport.length).toBeGreaterThanOrEqual(9);
   for (const image of imageReport) {
     expect(image.complete, `${image.alt} did not finish loading`).toBe(true);
     expect(image.naturalWidth, `${image.alt} is missing or low-resolution`).toBeGreaterThanOrEqual(512);
