@@ -87,7 +87,8 @@ test('Flop & Dope shows the Nippin dungeon guide without retired characters', as
     'Nippins',
     'Poster (Second Boss)',
     'Spark Ball',
-    'Madora (Boss)',
+    'Galler Lord (Boss)',
+    'Mada (Boss)',
     'Blood Shark',
     'Dragon Wing',
     'Ladybug (Boss)',
@@ -111,7 +112,7 @@ test('Flop & Dope reaches the reordered Nippin and boss levels without browser e
   await page.locator('#start-game-btn').click();
   await expect(page.locator('#gameplay-screen')).toHaveClass(/active/);
   await page.waitForTimeout(800);
-  for (const level of ['4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24']) {
+  for (const level of ['4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34']) {
     await page.locator('#hud-level-select').selectOption(level);
     await page.waitForTimeout(120);
   }

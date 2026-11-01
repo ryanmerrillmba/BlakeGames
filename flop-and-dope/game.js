@@ -1312,7 +1312,7 @@ class Projectile {
                 this.bounceCount++;
             }
         } 
-        else if (this.type === 'laser') {
+        else if (this.type === 'laser' || this.type === 'star-laser') {
             this.y += this.vy;
 
             // Lasers check deflection off platforms (including Hosco's boxes)
@@ -1427,20 +1427,21 @@ class Projectile {
         ctx.save();
         ctx.translate(-cameraX, 0);
 
-        if (this.type === 'laser') {
+        if (this.type === 'laser' || this.type === 'star-laser') {
             // Draw a horizontal bright neon red laser bolt (or blue if deflected)
-            ctx.fillStyle = (this.owner === 'hero') ? '#4dabf7' : '#ff4d4d';
+            const starLaser = this.type === 'star-laser';
+            ctx.fillStyle = (this.owner === 'hero') ? '#4dabf7' : (starLaser ? '#74c0fc' : '#ff4d4d');
             ctx.strokeStyle = '#2b2b2b';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = starLaser ? 3 : 2;
             
             ctx.beginPath();
             const scale = this.r / 8; // scale by radius (default is 8)
-            ctx.rect(this.x - 14 * scale, this.y - 3 * scale, 28 * scale, 6 * scale);
+            ctx.rect(this.x - 18 * scale, this.y - (starLaser ? 4 : 3) * scale, 36 * scale, (starLaser ? 8 : 6) * scale);
             ctx.fill();
             ctx.stroke();
             
             // Draw crackling sparks around it
-            drawWildHair(this.x, this.y, 9 * scale, (this.owner === 'hero') ? '#4dabf7' : '#ff4d4d');
+            drawWildHair(this.x, this.y, starLaser ? 13 * scale : 9 * scale, (this.owner === 'hero') ? '#4dabf7' : (starLaser ? '#ffd43b' : '#ff4d4d'));
         } else if (this.type === 'bomb') {
             // Draw a sketchy bomb circle with a lit fuse
             ctx.fillStyle = '#2b2b2b';
@@ -1807,14 +1808,20 @@ class Boss {
         this.smashedTimer = 0;
         this.wobbleTimer = Math.random() * 10;
 
-        if (this.type === 'nippin-king') {
+        if (this.type === 'dungeon-king') {
+            this.w = 150;
+            this.h = 130;
+            this.hearts = 7;
+            this.actionState = 'float';
+            this.timer = 100;
+        } else if (this.type === 'nippin-king') {
             this.w = 128;
             this.h = 128;
             this.hearts = 7;
             this.actionState = 'patrol';
             this.timer = 100;
             this.vx = 2.2;
-        } else if (this.type === 'madara') {
+        } else if (this.type === 'mada') {
             this.w = 120;
             this.h = 120;
             this.hearts = 6;
@@ -1822,12 +1829,19 @@ class Boss {
             this.timer = 100;
             this.vx = 2.0;
         } else if (this.type === 'spark-bobby-boss') {
-            this.w = 100;
-            this.h = 100;
-            this.hearts = 6;
-            this.actionState = 'patrol';
-            this.timer = 80;
-            this.vx = 2.4;
+            this.w = 180;
+            this.h = 160;
+            this.hearts = 8;
+            this.actionState = 'bounce';
+            this.timer = 65;
+            this.vx = 3.6;
+        } else if (this.type === 'galler-lord') {
+            this.w = 170;
+            this.h = 150;
+            this.hearts = 8;
+            this.actionState = 'space-patrol';
+            this.timer = 70;
+            this.vx = 2.8;
         } else if (this.type === 'blood-shark') {
             this.w = 90;
             this.h = 96;
@@ -1866,7 +1880,7 @@ class Boss {
             this.isElectrified = false;
         }
 
-        if (this.type === 'poster') {
+        if (this.type === 'poster' || this.type === 'dungeon-king') {
             if (this.actionState !== 'smashed') {
                 this.timer--;
             }
@@ -1946,8 +1960,8 @@ class Boss {
                 }
             }
         }
-        else if (this.type === 'madara') {
-            // Madora is a later boss built from the old artwork.
+        else if (this.type === 'mada') {
+            // Mada is a later boss built from the old artwork.
             this.wobbleTimer += 0.14;
             this.x += this.vx;
             if (this.x < 100 || this.x > levelWidth - 100 - this.w) {
@@ -1967,18 +1981,81 @@ class Boss {
             }
         }
         else if (this.type === 'spark-bobby-boss') {
-            this.wobbleTimer += 0.2;
+            // Spark Ball is a huge blazing jumper, not a hovering orb.
+            this.wobbleTimer += 0.24;
             this.x += this.vx;
             if (this.x < 100 || this.x > levelWidth - 100 - this.w) {
                 this.vx = -this.vx;
             }
-            this.y = 120 + Math.sin(this.wobbleTimer) * 24;
+            this.vy += GRAVITY * 1.15;
+            this.y += this.vy;
+            if (this.y <= 48) {
+                this.y = 48;
+                this.vy = Math.abs(this.vy) + 1;
+                triggerScreenShake(4);
+            }
+            if (this.y + this.h >= levelHeight - 40) {
+                this.y = levelHeight - 40 - this.h;
+                this.vy = -12.5;
+                triggerScreenShake(6);
+            }
+            platforms.forEach(platform => {
+                const overlaps = this.x + this.w > platform.x && this.x < platform.x + platform.w;
+                if (overlaps && this.y + this.h >= platform.y && this.y + this.h <= platform.y + 24 && this.vy > 0) {
+                    this.y = platform.y - this.h;
+                    this.vy = -11.5;
+                    triggerScreenShake(4);
+                }
+            });
             this.timer--;
             if (this.timer <= 0) {
-                this.timer = 70 + Math.random() * 45;
-                const dir = player.x < this.x ? -5 : 5;
-                projectiles.push(new Projectile(this.x + this.w / 2, this.y + this.h, dir, 2, 'enemy', 'spark'));
-                projectiles.push(new Projectile(this.x + this.w / 2, this.y + this.h, dir * 0.7, 3.5, 'enemy', 'spark'));
+                this.timer = 52 + Math.random() * 30;
+                const dir = player.x < this.x ? -6 : 6;
+                projectiles.push(new Projectile(this.x + this.w / 2, this.y + 42, dir, -3, 'enemy', 'spark'));
+                projectiles.push(new Projectile(this.x + this.w / 2, this.y + 52, dir * 0.75, -5, 'enemy', 'spark'));
+                projectiles.push(new Projectile(this.x + this.w / 2, this.y + 58, dir * 1.15, -1, 'enemy', 'spark'));
+            }
+        }
+        else if (this.type === 'galler-lord') {
+            // Galler Lord is a heavy armored mega that bounds around the arena.
+            // He stays grounded between jumps instead of hovering like a planet.
+            this.wobbleTimer += 0.12;
+            this.x += this.vx;
+            if (this.x < 100 || this.x > levelWidth - 100 - this.w) {
+                this.vx = -this.vx;
+            }
+
+            this.vy += GRAVITY * 0.9;
+            this.y += this.vy;
+            if (this.y + this.h >= levelHeight - 40) {
+                this.y = levelHeight - 40 - this.h;
+                this.vy = -10.5;
+                triggerScreenShake(4);
+            }
+            if (this.y <= 48) {
+                this.y = 48;
+                this.vy = Math.abs(this.vy) + 0.5;
+            }
+            platforms.forEach(platform => {
+                const overlaps = this.x + this.w > platform.x && this.x < platform.x + platform.w;
+                if (overlaps && this.y + this.h >= platform.y && this.y + this.h <= platform.y + 24 && this.vy > 0) {
+                    this.y = platform.y - this.h;
+                    this.vy = -9.5;
+                    triggerScreenShake(3);
+                }
+            });
+
+            this.timer--;
+            if (this.timer <= 0) {
+                this.timer = 72 + Math.random() * 35;
+                this.actionState = 'laser-fire';
+                const dir = player.x < this.x ? -7 : 7;
+                const eyeY = this.y + 35;
+                projectiles.push(new Projectile(this.x + this.w / 2 - 18, eyeY, dir, 0, 'enemy', 'star-laser'));
+                projectiles.push(new Projectile(this.x + this.w / 2 + 18, eyeY, dir, 0, 'enemy', 'star-laser'));
+                triggerScreenShake(5);
+            } else if (this.actionState === 'laser-fire' && this.timer < 38) {
+                this.actionState = 'space-patrol';
             }
         }
         else if (this.type === 'blood-shark') {
@@ -2415,7 +2492,7 @@ class Boss {
         ctx.save();
         ctx.translate(-cameraX, 0);
 
-        if (this.type === 'poster') {
+        if (this.type === 'poster' || this.type === 'dungeon-king') {
             const img = enemyImages['dungeon-king'];
             let drawHeight = this.h;
             let drawY = this.y;
@@ -2432,6 +2509,12 @@ class Boss {
                 // Fallback block
                 const seed = Math.floor(this.x * 2 + this.y * 3);
                 drawSketchyRect(this.x, drawY, this.w, drawHeight, '#ced4da', '#2b2b2b', 3.0, seed);
+            }
+            if (this.type === 'dungeon-king') {
+                ctx.fillStyle = '#ffd43b';
+                ctx.font = '22px Gochi Hand';
+                ctx.textAlign = 'center';
+                ctx.fillText('DUNGEON KING', this.x + this.w / 2, drawY - 10);
             }
         }
         else if (this.type === 'nippin-king') {
@@ -2462,7 +2545,7 @@ class Boss {
             ctx.fill();
             ctx.stroke();
         }
-        else if (this.type === 'madara') {
+        else if (this.type === 'mada') {
             const img = enemyImages['matera'];
             const angle = Math.sin(this.wobbleTimer) * 0.08;
             ctx.save();
@@ -2477,23 +2560,77 @@ class Boss {
             ctx.fillStyle = '#ffd43b';
             ctx.font = '22px Gochi Hand';
             ctx.textAlign = 'center';
-            ctx.fillText('Madora', this.x + this.w / 2, this.y - 10);
+            ctx.fillText('Mada', this.x + this.w / 2, this.y - 10);
         }
         else if (this.type === 'spark-bobby-boss') {
             const cx = this.x + this.w / 2;
             const cy = this.y + this.h / 2;
-            const pulse = Math.sin(this.wobbleTimer) * 5;
-            drawWildHair(cx, cy, 46 + pulse, '#ffd43b', Math.floor(this.x * 2));
-            drawSketchyCircle(cx, cy, 30, '#fff3bf', '#2b2b2b', Math.floor(this.x * 3));
-            drawSketchyCircle(cx - 11, cy - 6, 5, '#ffffff', '#2b2b2b', 31);
-            drawSketchyCircle(cx + 11, cy - 6, 5, '#ffffff', '#2b2b2b', 32);
-            drawSketchyLine(cx - 11, cy - 6, cx - 8, cy - 3, '#2b2b2b', 2, 33);
-            drawSketchyLine(cx + 11, cy - 6, cx + 8, cy - 3, '#2b2b2b', 2, 34);
-            drawSketchyLine(cx - 10, cy + 11, cx + 10, cy + 11, '#2b2b2b', 2, 35);
+            const pulse = Math.sin(this.wobbleTimer) * 6;
+            const seed = Math.floor(this.x * 3);
+            // A large blazing version of the guide's Spark Ball illustration.
+            drawWildHair(cx, cy + pulse, 76, '#ff922b', seed);
+            drawWildHair(cx, cy + pulse, 62, '#ffd43b', seed + 1);
+            drawSketchyCircle(cx, cy + pulse, 48, '#fff3bf', '#2b2b2b', seed + 2);
+            drawSketchyCircle(cx, cy - 10 + pulse, 35, '#ffd43b', '#ff922b', seed + 3);
+            drawSketchyCircle(cx - 17, cy - 11 + pulse, 7, '#2b2b2b', '#2b2b2b', seed + 4);
+            drawSketchyCircle(cx + 17, cy - 11 + pulse, 7, '#2b2b2b', '#2b2b2b', seed + 5);
+            drawSketchyLine(cx - 16, cy + 18 + pulse, cx + 16, cy + 18 + pulse, '#2b2b2b', 4, seed + 6);
+            drawSketchyLine(cx - 92, cy - 26 + pulse, cx - 67, cy - 5 + pulse, '#ffd43b', 9, seed + 7);
+            drawSketchyLine(cx - 67, cy - 5 + pulse, cx - 84, cy + 28 + pulse, '#ffd43b', 9, seed + 8);
+            drawSketchyLine(cx + 92, cy + 26 + pulse, cx + 67, cy + 5 + pulse, '#ffd43b', 9, seed + 9);
+            drawSketchyLine(cx + 67, cy + 5 + pulse, cx + 84, cy - 28 + pulse, '#ffd43b', 9, seed + 10);
             ctx.fillStyle = '#ff922b';
-            ctx.font = '20px Gochi Hand';
+            ctx.font = '24px Gochi Hand';
             ctx.textAlign = 'center';
-            ctx.fillText('SPARK BALL', cx, this.y - 12);
+            ctx.fillText('SPARK BALL', cx, this.y - 18);
+        }
+        else if (this.type === 'galler-lord') {
+            const cx = this.x + this.w / 2;
+            const cy = this.y + this.h / 2;
+            const pulse = Math.sin(this.wobbleTimer) * 4;
+            const seed = Math.floor(this.x * 2);
+            // Galler Lord is a shiny armored mega, not a planet or a flying shooter.
+            drawSketchyLine(cx - 48, cy + 5 + pulse, cx + 48, cy + 5 + pulse, '#74c0fc', 16, seed);
+            drawSketchyRect(cx - 42, cy - 4 + pulse, 84, 72, '#172554', '#2b2b2b', 4, seed + 1);
+            drawSketchyLine(cx - 42, cy + 18 + pulse, cx - 74, cy + 40 + pulse, '#74c0fc', 12, seed + 2);
+            drawSketchyLine(cx + 42, cy + 18 + pulse, cx + 74, cy + 40 + pulse, '#74c0fc', 12, seed + 3);
+            drawSketchyLine(cx - 22, cy + 66 + pulse, cx - 32, cy + 91 + pulse, '#5f3dc4', 14, seed + 4);
+            drawSketchyLine(cx + 22, cy + 66 + pulse, cx + 32, cy + 91 + pulse, '#5f3dc4', 14, seed + 5);
+            drawSketchyCircle(cx, cy - 32 + pulse, 38, '#74c0fc', '#2b2b2b', seed + 6);
+            drawSketchyCircle(cx - 13, cy - 35 + pulse, 7, '#fff3bf', '#2b2b2b', seed + 7);
+            drawSketchyCircle(cx + 13, cy - 35 + pulse, 7, '#fff3bf', '#2b2b2b', seed + 8);
+            drawSketchyLine(cx - 11, cy - 12 + pulse, cx + 11, cy - 12 + pulse, '#2b2b2b', 3, seed + 8);
+            ctx.strokeStyle = '#ffd43b';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(cx, cy - 32 + pulse, 44, Math.PI + 0.2, Math.PI * 2 - 0.2);
+            ctx.stroke();
+            drawSketchyLine(cx - 32, cy + 22 + pulse, cx + 32, cy + 22 + pulse, '#fff3bf', 4, seed + 9);
+            drawSketchyCircle(cx, cy + 30 + pulse, 10, '#ffd43b', '#fff3bf', seed + 10);
+            drawSketchyLine(cx - 28, cy + 39 + pulse, cx + 28, cy + 39 + pulse, '#74c0fc', 4, seed + 11);
+            if (this.actionState === 'laser-fire') {
+                ctx.save();
+                ctx.strokeStyle = '#74c0fc';
+                ctx.shadowColor = '#ffd43b';
+                ctx.shadowBlur = 12;
+                ctx.lineWidth = 7;
+                ctx.beginPath();
+                ctx.moveTo(cx - 13, cy - 35 + pulse);
+                ctx.lineTo(player.x < this.x ? 0 : levelWidth, cy - 28 + pulse);
+                ctx.moveTo(cx + 13, cy - 35 + pulse);
+                ctx.lineTo(player.x < this.x ? 0 : levelWidth, cy - 20 + pulse);
+                ctx.stroke();
+                ctx.restore();
+            }
+            ctx.fillStyle = '#fff3bf';
+            ctx.font = '24px Gochi Hand';
+            ctx.textAlign = 'center';
+            ctx.fillText('GALLER LORD', cx, this.y - 16);
+            for (let i = 0; i < 4; i++) {
+                const starX = this.x + 18 + i * 42;
+                const starY = this.y - 8 + Math.sin(this.wobbleTimer + i) * 9;
+                ctx.fillText('✦', starX, starY);
+            }
         }
         else if (this.type === 'blood-shark') {
             const img = enemyImages['blood-shark'];
@@ -2668,7 +2805,7 @@ class Boss {
         if (this.isElectrified || (this.invulnerableFrame > 0 && Math.floor(this.invulnerableFrame / 5) % 2 === 0)) {
             let drawHeight = this.h;
             let drawY = this.y;
-            if ((this.type === 'poster' || this.type === 'dungeon-overlord') && this.actionState === 'smashed') {
+            if ((this.type === 'poster' || this.type === 'dungeon-king' || this.type === 'dungeon-overlord') && this.actionState === 'smashed') {
                 drawHeight = this.h * (this.type === 'dungeon-overlord' ? 0.45 : 0.4);
                 drawY = levelHeight - 40 - drawHeight;
             } else if (this.type === 'blood-shark' && this.actionState === 'bend') {
@@ -2769,9 +2906,12 @@ function getLevelName(levelNum) {
         7: 'Level 7', 8: 'Level 8', 9: 'Level 9 (Blood Shark)',
         10: 'Level 10', 11: 'Level 11', 12: 'Level 12 (Dragon Boss)',
         13: 'Level 13', 14: 'Level 14', 15: 'Level 15 (Ladybug)',
-        16: 'Level 16', 17: 'Level 17', 18: 'Level 18 (Madora)',
-        19: 'Level 19', 20: 'Level 20', 21: 'Level 21 (Spark Ball)',
-        22: 'Level 22', 23: 'Level 23', 24: 'Level 24 (Final Boss)'
+        16: 'Level 16', 17: 'Level 17', 18: 'Level 18 (Mada)',
+        19: 'Level 19', 20: 'Level 20', 21: 'Level 21',
+        22: 'Level 22', 23: 'Level 23', 24: 'Level 24',
+        25: 'Level 25', 26: 'Level 26', 27: 'Level 27',
+        28: 'Level 28 (Spark Ball)', 29: 'Level 29', 30: 'Level 30', 31: 'Level 31 (Galler Lord)',
+        32: 'Level 32', 33: 'Level 33', 34: 'Level 34 (Final Boss)'
     };
     return names[levelNum] || 'Level ' + levelNum;
 }
@@ -2806,14 +2946,17 @@ function progressToNextLevel(nextLevelNum) {
         subtitle = "Prepare for two more levels before Ladybug!";
     } else if (currentLevel === 15) {
         title = "LADYBUG DEFEATED! 🐞";
-        subtitle = "Prepare for two more levels before Madora!";
+        subtitle = "Prepare for two more levels before Mada!";
     } else if (currentLevel === 18) {
-        title = "Madora DEFEATED! 🟣";
-        subtitle = "Prepare for two more levels before Spark Ball!";
-    } else if (currentLevel === 21) {
+        title = "MADA DEFEATED! 🟣";
+        subtitle = "Prepare for the blazing Spark Ball boss at level 28!";
+    } else if (currentLevel === 28) {
         title = "SPARK BALL DEFEATED! ⚡";
+        subtitle = "Prepare for two more levels before Galler Lord!";
+    } else if (currentLevel === 31) {
+        title = "GALLER LORD DEFEATED! 🌌";
         subtitle = "Prepare for two more levels before the Final Boss!";
-    } else if (currentLevel === 24) {
+    } else if (currentLevel === 34) {
         title = "DUNGEON EMPEROR DEFEATED! 👑";
         subtitle = "YOU HAVE SAVED THE SKETCHBOOK ADVENTURE!";
     }
@@ -2828,7 +2971,7 @@ function progressToNextLevel(nextLevelNum) {
     ctx.fillText(subtitle, canvas.width / 2, canvas.height / 2 + 20);
     
     setTimeout(() => {
-        if (currentLevel === 24) {
+        if (currentLevel === 34) {
             startCelebration();
         } else {
             currentLevel = nextLevelNum;
@@ -2858,7 +3001,7 @@ function loadLevel(levelNum) {
     }
 
     // Floor along whole level width (except where we manually override)
-    if (![4, 5, 6, 7, 8, 9, 10, 12, 15, 18, 21, 24].includes(levelNum)) {
+    if (![4, 5, 6, 7, 8, 9, 10, 12, 15, 18, 28, 31, 34].includes(levelNum)) {
         platforms.push(new Platform(0, levelHeight - 40, 600, 40, 'grass'));
     }
     
@@ -3188,16 +3331,16 @@ function loadLevel(levelNum) {
         bossIntroTimer = 300;
     }
     else if (levelNum === 18) {
-        levelWidth = 1100; // Madora boss arena
+        levelWidth = 1100; // Mada boss arena
         platforms.push(new Platform(0, levelHeight - 40, 1100, 40, 'brick'));
         platforms.push(new Platform(350, levelHeight - 140, 400, 20, 'brick'));
-        boss = new Boss(500, levelHeight - 120, 'madara');
+        boss = new Boss(500, levelHeight - 120, 'mada');
         bossIntroTimer = 300;
 
         collectibles.push(new Collectible(300, levelHeight - 180, 'heart'));
         collectibles.push(new Collectible(900, levelHeight - 180, 'heart'));
     }
-    else if (levelNum === 19 || levelNum === 20 || levelNum === 22 || levelNum === 23) {
+    else if ([19, 20, 21, 22, 23, 24, 25, 26, 27, 29, 30, 32, 33].includes(levelNum)) {
         const stageOffset = levelNum >= 22 ? 200 : 0;
         levelWidth = 1800 + stageOffset;
         platforms.push(new Platform(0, levelHeight - 40, levelWidth, 40, 'grass'));
@@ -3215,7 +3358,7 @@ function loadLevel(levelNum) {
         collectibles.push(new Collectible(1500, levelHeight - 220, 'heart'));
         bossIntroTimer = 300;
     }
-    else if (levelNum === 21) {
+    else if (levelNum === 28) {
         levelWidth = 1100; // Spark Ball boss arena
         platforms.push(new Platform(0, levelHeight - 40, 1100, 40, 'brick'));
         platforms.push(new Platform(250, levelHeight - 160, 140, 20, 'brick'));
@@ -3225,7 +3368,17 @@ function loadLevel(levelNum) {
         collectibles.push(new Collectible(250, levelHeight - 200, 'heart'));
         collectibles.push(new Collectible(850, levelHeight - 260, 'heart'));
     }
-    else if (levelNum === 24) {
+    else if (levelNum === 31) {
+        levelWidth = 1300; // Galler Lord space arena
+        platforms.push(new Platform(0, levelHeight - 40, 1300, 40, 'brick'));
+        platforms.push(new Platform(230, levelHeight - 155, 180, 20, 'brick'));
+        platforms.push(new Platform(900, levelHeight - 220, 180, 20, 'brick'));
+        boss = new Boss(550, 90, 'galler-lord');
+        bossIntroTimer = 300;
+        collectibles.push(new Collectible(280, levelHeight - 210, 'heart'));
+        collectibles.push(new Collectible(980, levelHeight - 280, 'heart'));
+    }
+    else if (levelNum === 34) {
         levelWidth = 1200; // Final Boss Arena (Dungeon Emperor)
         platforms.push(new Platform(0, levelHeight - 40, 1200, 40, 'brick'));
         platforms.push(new Platform(200, levelHeight - 140, 200, 20, 'brick'));
@@ -3523,12 +3676,14 @@ function checkCollisions() {
                             progressToNextLevel(7);
                         } else if (boss.type === 'nippin-king') {
                             progressToNextLevel(4);
-                        } else if (boss.type === 'madara') {
+                        } else if (boss.type === 'mada') {
                             progressToNextLevel(19);
                         } else if (boss.type === 'blood-shark') {
                             progressToNextLevel(10);
                         } else if (boss.type === 'spark-bobby-boss') {
-                            progressToNextLevel(22);
+                            progressToNextLevel(29);
+                        } else if (boss.type === 'galler-lord') {
+                            progressToNextLevel(32);
                         } else if (boss.type === 'dragon-emperor') {
                             progressToNextLevel(13);
                         } else if (boss.type === 'star-empress') {
@@ -3552,7 +3707,7 @@ function checkCollisions() {
             player.y < boss.y + boss.h &&
             player.y + player.height > boss.y) {
             
-            if (boss.type === 'poster') {
+            if (boss.type === 'poster' || boss.type === 'dungeon-king') {
                 if (boss.actionState === 'smashed') {
                     // If Poster is smashed on the floor: touching him ELECTRIFIES and hurts him!
                     if (boss.invulnerableFrame <= 0) {
@@ -3602,7 +3757,7 @@ function checkCollisions() {
                     player.takeDamage(1);
                 }
             }
-            else if (boss.type === 'madara') {
+            else if (boss.type === 'mada') {
                 if (player.vy > 0 && player.y + player.height - player.vy <= boss.y + 28) {
                     if (boss.invulnerableFrame <= 0) {
                         boss.hearts--;
@@ -3628,7 +3783,23 @@ function checkCollisions() {
                         player.vy = -9;
                         triggerScreenShake(10);
                         if (boss.hearts <= 0) {
-                            progressToNextLevel(22);
+                            progressToNextLevel(29);
+                        }
+                    }
+                } else {
+                    player.takeDamage(1);
+                }
+            }
+            else if (boss.type === 'galler-lord') {
+                if (player.vy > 0 && player.y + player.height - player.vy <= boss.y + 34) {
+                    if (boss.invulnerableFrame <= 0) {
+                        boss.hearts--;
+                        boss.invulnerableFrame = 48;
+                        boss.isElectrified = true;
+                        player.vy = -10;
+                        triggerScreenShake(12);
+                        if (boss.hearts <= 0) {
+                            progressToNextLevel(32);
                         }
                     }
                 } else {
@@ -4248,7 +4419,7 @@ function gameLoop() {
         drawSketchyRect(barX, barY, barWidth, barHeight, null, '#2b2b2b', 2.5);
 
         // Draw red health hearts
-        const totalHearts = boss.type === 'nippin-king' ? 7 : (boss.type === 'madara' || boss.type === 'blood-shark' || boss.type === 'dragon-emperor' || boss.type === 'spark-bobby-boss' ? 6 : (boss.type === 'dungeon-overlord' ? 8 : 5));
+        const totalHearts = boss.type === 'nippin-king' || boss.type === 'dungeon-king' ? 7 : (boss.type === 'mada' || boss.type === 'blood-shark' || boss.type === 'dragon-emperor' ? 6 : (boss.type === 'spark-bobby-boss' || boss.type === 'galler-lord' || boss.type === 'dungeon-overlord' ? 8 : 5));
         const heartWidth = barWidth / totalHearts;
         for (let i = 0; i < boss.hearts; i++) {
             ctx.fillStyle = '#ff6b6b';
@@ -4260,7 +4431,7 @@ function gameLoop() {
         ctx.fillStyle = '#ff6b6b';
         ctx.font = '22px Gochi Hand';
         ctx.textAlign = 'center';
-        const bossTitle = boss.type === 'nippin-king' ? 'NIPPIN KING' : (boss.type === 'madara' ? 'Madora' : (boss.type === 'blood-shark' ? 'BLOOD SHARK BOSS' : (boss.type === 'dragon-emperor' ? 'DRAGON BOSS' : (boss.type === 'star-empress' ? 'LADYBUG' : (boss.type === 'spark-bobby-boss' ? 'SPARK BALL' : (boss.type === 'dungeon-overlord' ? 'DUNGEON EMPEROR' : 'POSTER'))))));
+        const bossTitle = boss.type === 'nippin-king' ? 'NIPPIN KING' : (boss.type === 'mada' ? 'MADA' : (boss.type === 'blood-shark' ? 'BLOOD SHARK BOSS' : (boss.type === 'dragon-emperor' ? 'DRAGON BOSS' : (boss.type === 'star-empress' ? 'LADYBUG' : (boss.type === 'spark-bobby-boss' ? 'SPARK BALL' : (boss.type === 'galler-lord' ? 'GALLER LORD' : (boss.type === 'dungeon-king' ? 'DUNGEON KING' : (boss.type === 'dungeon-overlord' ? 'DUNGEON EMPEROR' : 'POSTER'))))))));
         ctx.fillText(bossTitle, canvas.width / 2, barY - 6);
     }
 
@@ -4321,16 +4492,21 @@ function gameLoop() {
             ctx.fillStyle = '#ff922b';
             ctx.fillText('Stun Ladybug, then stomp her shell!', canvas.width / 2, bannerY + 52);
         } else if (currentLevel === 18) {
-            ctx.fillText('🟣 BOSS BATTLE: Madora!', canvas.width / 2, bannerY + 28);
+        ctx.fillText('🟣 BOSS BATTLE: Mada!', canvas.width / 2, bannerY + 28);
             ctx.font = '18px Patrick Hand';
             ctx.fillStyle = '#ff922b';
-            ctx.fillText('Jump on Madora when he lands, then dodge his sparks!', canvas.width / 2, bannerY + 52);
-        } else if (currentLevel === 21) {
+            ctx.fillText('Jump on Mada when he lands, then dodge his sparks!', canvas.width / 2, bannerY + 52);
+        } else if (currentLevel === 28) {
             ctx.fillText('⚡ BOSS BATTLE: SPARK BALL!', canvas.width / 2, bannerY + 28);
             ctx.font = '18px Patrick Hand';
             ctx.fillStyle = '#ff922b';
-            ctx.fillText('Jump on the crackling Spark Ball while it bounces!', canvas.width / 2, bannerY + 52);
-        } else if (currentLevel === 24) {
+            ctx.fillText('Jump on the blazing Spark Ball wherever it bounces!', canvas.width / 2, bannerY + 52);
+        } else if (currentLevel === 31) {
+            ctx.fillText('🌌 BOSS BATTLE: GALLER LORD!', canvas.width / 2, bannerY + 28);
+            ctx.font = '18px Patrick Hand';
+            ctx.fillStyle = '#ff922b';
+            ctx.fillText('Stomp the shiny mega and dodge his eye lasers!', canvas.width / 2, bannerY + 52);
+        } else if (currentLevel === 34) {
             ctx.fillText('👑 FINAL BOSS: DUNGEON EMPEROR!', canvas.width / 2, bannerY + 28);
             ctx.font = '18px Patrick Hand';
             ctx.fillStyle = '#ff922b';
@@ -4383,10 +4559,27 @@ function drawFlagPole(x, y) {
 
 function drawBackgroundElements() {
     // Poster and Blood Shark use the original lined-paper/pond background.
-    const worldNum = currentLevel === 6 || currentLevel === 9 ? 2 : Math.ceil(currentLevel / 3);
+    const worldNum = currentLevel === 6 || currentLevel === 9 ? 2 : (currentLevel === 31 ? 7 : Math.ceil(currentLevel / 3));
 
     // DRAW BASE PAPER
-    if (currentLevel === 3) {
+    if (currentLevel === 31) {
+        // Galler Lord's arena is open galaxy space, not a planet surface.
+        ctx.fillStyle = '#080b24';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < 42; i++) {
+            const starX = (i * 97 + cameraX * 0.04) % (canvas.width + 40) - 20;
+            const starY = 18 + ((i * 53) % 255);
+            const starSize = 1 + (i % 3);
+            ctx.fillStyle = i % 5 === 0 ? '#74c0fc' : (i % 4 === 0 ? '#ffd43b' : '#fff3bf');
+            ctx.beginPath();
+            ctx.arc(starX, starY, starSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.fillStyle = 'rgba(95, 61, 196, 0.22)';
+        ctx.beginPath();
+        ctx.arc(canvas.width * 0.72, 145, 170, 0, Math.PI * 2);
+        ctx.fill();
+    } else if (currentLevel === 3) {
         // Nippin King's dungeon remains the only dungeon room.
         ctx.fillStyle = '#27233a';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -4521,7 +4714,15 @@ function drawBackgroundElements() {
     }
 
     // DRAW THEMED ASSETS
-    if (currentLevel === 3) {
+    if (currentLevel === 31) {
+        // Keep the galaxy clear of planetary props; the boss is the space character.
+        ctx.fillStyle = 'rgba(116, 192, 252, 0.8)';
+        ctx.font = '24px Gochi Hand';
+        ctx.fillText('OPEN GALAXY: GALLER LORD 🌌', 350, 50);
+        ctx.fillStyle = 'rgba(255, 212, 59, 0.8)';
+        ctx.font = '18px Gochi Hand';
+        ctx.fillText('STAR SHOTS AHEAD!', 520, 90);
+    } else if (currentLevel === 3) {
         // Dungeon torches behind Nippin King's arena.
         ctx.save();
         ctx.translate(-cameraX * 0.05, 0);
@@ -4989,12 +5190,22 @@ function drawBackgroundElements() {
     } else if (currentLevel === 18) {
         ctx.fillStyle = 'rgba(177, 151, 252, 0.8)';
         ctx.font = '24px Gochi Hand';
-        ctx.fillText('Madora BOSS ARENA 🟣', 420, 50);
-    } else if (currentLevel === 21) {
+        ctx.fillText('MADA BOSS ARENA 🟣', 420, 50);
+    } else if (currentLevel === 28) {
         ctx.fillStyle = 'rgba(255, 212, 59, 0.8)';
         ctx.font = '24px Gochi Hand';
         ctx.fillText('SPARK BALL BOSS ARENA ⚡', 360, 50);
-    } else if (currentLevel === 24) {
+    } else if (currentLevel === 31) {
+        ctx.fillStyle = 'rgba(81, 207, 246, 0.9)';
+        ctx.font = '24px Gochi Hand';
+        ctx.fillText('GALAXY ARENA: GALLER LORD 🌌', 330, 50);
+        for (let i = 0; i < 18; i++) {
+            const starX = 80 + ((i * 137) % 1040);
+            const starY = 70 + ((i * 71) % 220);
+            ctx.fillStyle = i % 3 === 0 ? '#ffd43b' : '#fff3bf';
+            ctx.fillText('✦', starX, starY);
+        }
+    } else if (currentLevel === 34) {
         ctx.fillStyle = 'rgba(255, 107, 107, 0.8)';
         ctx.font = '24px Gochi Hand';
         ctx.fillText('FINAL BOSS: DUNGEON EMPEROR 👑', 360, 50);
