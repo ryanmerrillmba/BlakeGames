@@ -89,6 +89,13 @@
 
   function reportAnalyticsVerification(status) {
     if (!new URLSearchParams(location.search).has('analytics-test')) return;
+    const notice = document.createElement('div');
+    notice.setAttribute('role', 'status');
+    notice.style.cssText = 'position:fixed;z-index:2147483647;left:12px;right:12px;top:12px;padding:14px 16px;border-radius:10px;background:#111827;color:#fff;font:600 16px/1.4 system-ui,sans-serif;text-align:center;box-shadow:0 4px 18px rgba(0,0,0,.35)';
+    notice.textContent = status === 'tag_loaded'
+      ? 'Analytics test: Google’s tracking script loaded and the verification event was queued.'
+      : 'Analytics test: Google’s tracking script was blocked or could not load on this device.';
+    document.body.appendChild(notice);
     loadTelemetry();
     let attempts = 0;
     const report = () => {
