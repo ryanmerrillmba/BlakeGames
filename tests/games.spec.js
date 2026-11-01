@@ -74,6 +74,17 @@ test('Flop & Dope reaches gameplay after hero selection without missing-image dr
   expect(failures).toEqual([]);
 });
 
+test('Nut Throw Catch drops the yellow and blue Bear nuts in their special levels', async ({ page }) => {
+  await blockThirdParties(page);
+  await page.goto('/nut-throw-catch/');
+  await page.locator('#levelsBtn').click();
+  await page.getByRole('button', { name: /Bear Level 2/ }).click();
+  await expect.poll(() => page.locator('.nut.yellow').count(), { timeout: 5_000 }).toBeGreaterThan(0);
+  await page.locator('#levelsBtn').click();
+  await page.getByRole('button', { name: /Bear Level 3/ }).click();
+  await expect.poll(() => page.locator('.nut.blue').count(), { timeout: 5_000 }).toBeGreaterThan(0);
+});
+
 test('10 Military Mills progresses from title through a hero selection into gameplay', async ({ page }) => {
   await blockThirdParties(page);
   await page.goto('/10-military-mills/');
