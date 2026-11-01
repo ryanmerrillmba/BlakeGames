@@ -1786,12 +1786,12 @@ class PushableBox {
     }
 }
 
-// Boss Class - Booster (first boss), Nippin King (second boss), and later bosses
+// Boss Class - Poster (second boss), Nippin King (first boss), and later bosses
 class Boss {
-    constructor(x, y, type = 'booster') {
+    constructor(x, y, type = 'poster') {
         this.x = x;
         this.y = y;
-        this.type = type; // 'booster', 'nippin-king', or a later boss type
+        this.type = type; // 'poster', 'nippin-king', or a later boss type
         this.w = 110;
         this.h = 100;
         this.hearts = 5;
@@ -1859,7 +1859,7 @@ class Boss {
             this.isElectrified = false;
         }
 
-        if (this.type === 'booster') {
+        if (this.type === 'poster') {
             if (this.actionState !== 'smashed') {
                 this.timer--;
             }
@@ -2393,13 +2393,13 @@ class Boss {
         ctx.save();
         ctx.translate(-cameraX, 0);
 
-        if (this.type === 'booster') {
+        if (this.type === 'poster') {
             const img = enemyImages['dungeon-king'];
             let drawHeight = this.h;
             let drawY = this.y;
             
             if (this.actionState === 'smashed') {
-                // Draw Booster smashed flat on the floor
+                // Draw Poster smashed flat on the floor
                 drawHeight = this.h * 0.4;
                 drawY = levelHeight - 40 - drawHeight;
             }
@@ -2630,7 +2630,7 @@ class Boss {
         if (this.isElectrified || (this.invulnerableFrame > 0 && Math.floor(this.invulnerableFrame / 5) % 2 === 0)) {
             let drawHeight = this.h;
             let drawY = this.y;
-            if ((this.type === 'booster' || this.type === 'dungeon-overlord') && this.actionState === 'smashed') {
+            if ((this.type === 'poster' || this.type === 'dungeon-overlord') && this.actionState === 'smashed') {
                 drawHeight = this.h * (this.type === 'dungeon-overlord' ? 0.45 : 0.4);
                 drawY = levelHeight - 40 - drawHeight;
             } else if (this.type === 'blood-shark' && this.actionState === 'bend') {
@@ -2727,11 +2727,11 @@ function triggerScreenShake(duration) {
 function getLevelName(levelNum) {
     if (levelNum === 1) return "World 1-1";
     if (levelNum === 2) return "World 1-2";
-    if (levelNum === 3) return "World 1-3 (Boss)";
-    if (levelNum === 4) return "World 2-1";
-    if (levelNum === 5) return "World 2-2";
-    if (levelNum === 6) return "World 2-3 (Boss)";
-    if (levelNum === 7) return "World 3-1";
+    if (levelNum === 3) return "World 1-3 (Nippin King)";
+    if (levelNum === 4) return "World 2-1 (Nippins)";
+    if (levelNum === 5) return "World 2-2 (Nippins)";
+    if (levelNum === 6) return "World 2-3 (Poster)";
+    if (levelNum === 7) return "World 3-1 (Blood Shark)";
     if (levelNum === 8) return "World 3-2";
     if (levelNum === 9) return "World 3-3 (Boss)";
     if (levelNum === 10) return "World 4-1";
@@ -2763,11 +2763,11 @@ function progressToNextLevel(nextLevelNum) {
     let subtitle = "Preparing next level...";
     
     if (currentLevel === 3) {
-        title = "POSTER DEFEATED! 👹";
-        subtitle = "Prepare for World 2-1: The Gray Pond!";
+        title = "NIPPIN KING DEFEATED! 👑";
+        subtitle = "Prepare for World 2-1: Nippin Fields!";
     } else if (currentLevel === 6) {
-        title = "BLOOD SHARK DEFEATED! 🦈👑";
-        subtitle = "Prepare for World 3-1: Space & Gravity!";
+        title = "POSTER DEFEATED! 👹";
+        subtitle = "Prepare for World 3-1: The Gray Pond!";
     } else if (currentLevel === 9) {
         title = "DRAGON EMPEROR DEFEATED! 🐉";
         subtitle = "Prepare for World 4-1: The Volcano Pool!";
@@ -2871,14 +2871,14 @@ function loadLevel(levelNum) {
         platforms.push(new Platform(150, levelHeight - 140, 120, 20, 'box'));
         platforms.push(new Platform(730, levelHeight - 140, 120, 20, 'box'));
 
-        // Spawn Booster as the first boss. Nippins fill the dungeon as regular enemies.
+        // Spawn the Nippin King as the first boss. Nippins fill the dungeon around him.
         enemies.push(new Enemy(180, levelHeight - 100, 'nippin'));
         enemies.push(new Enemy(300, levelHeight - 100, 'nippin'));
         enemies.push(new Enemy(620, levelHeight - 100, 'nippin'));
         enemies.push(new Enemy(760, levelHeight - 100, 'nippin'));
         enemies.push(new Enemy(220, levelHeight - 180, 'nippin'));
         enemies.push(new Enemy(680, levelHeight - 180, 'nippin'));
-        boss = new Boss(440, 110, 'booster');
+        boss = new Boss(440, 110, 'nippin-king');
         bossIntroTimer = 300; // 5-second intro hint
 
         // Collectible Hearts in Boss Level
@@ -2886,90 +2886,52 @@ function loadLevel(levelNum) {
         collectibles.push(new Collectible(780, levelHeight - 180, 'heart'));
     }
     else if (levelNum === 4) {
-        levelWidth = 1800; // Large level for World 2-1
-        platforms.push(new Platform(0, levelHeight - 40, 450, 40, 'brick')); // left shore
-        platforms.push(new Platform(950, levelHeight - 40, 850, 40, 'brick')); // right shore
-        
-        platforms.push(new Platform(250, levelHeight - 140, 100, 20, 'box'));
-        platforms.push(new Platform(500, levelHeight - 140, 100, 20, 'box'));
-        platforms.push(new Platform(750, levelHeight - 140, 100, 20, 'box'));
-        platforms.push(new Platform(1100, levelHeight - 140, 120, 20, 'box'));
+        levelWidth = 1800; // World 2-1: a plain Nippin field
+        platforms.push(new Platform(0, levelHeight - 40, 1800, 40, 'grass'));
+        platforms.push(new Platform(260, levelHeight - 140, 120, 20, 'brick'));
+        platforms.push(new Platform(680, levelHeight - 190, 140, 20, 'brick'));
+        platforms.push(new Platform(1160, levelHeight - 140, 120, 20, 'brick'));
+        platforms.push(new Platform(1480, levelHeight - 220, 120, 20, 'brick'));
 
-        // Spawn gray pond and pushable cube ("Blood Shark Cube")
-        ponds.push(new Pond(450, levelHeight - 110, 500, 110));
-        pushableBoxes.push(new PushableBox(300, levelHeight - 88, 48, 48));
+        enemies.push(new Enemy(420, levelHeight - 100, 'nippin'));
+        enemies.push(new Enemy(760, levelHeight - 250, 'nippin'));
+        enemies.push(new Enemy(1040, levelHeight - 100, 'nippin'));
+        enemies.push(new Enemy(1320, levelHeight - 180, 'nippin'));
+        enemies.push(new Enemy(1660, levelHeight - 100, 'nippin'));
 
-        // Spawn submerged enemies inside the pond
-        enemies.push(new Enemy(600, levelHeight - 80, 'nippin'));
-        enemies.push(new Enemy(800, levelHeight - 80, 'nippin'));
-
-        // Normal enemies
-        enemies.push(new Enemy(1300, levelHeight - 100, 'nippin'));
-        enemies.push(new Enemy(1500, levelHeight - 180, 'nippin'));
-        enemies.push(new Enemy(1600, levelHeight - 100, 'spark-bobby'));
-
-        // Collectible Hearts (World 2-1)
         collectibles.push(new Collectible(300, levelHeight - 180, 'heart'));
-        collectibles.push(new Collectible(750, levelHeight - 180, 'heart'));
-        collectibles.push(new Collectible(1200, levelHeight - 180, 'heart'));
+        collectibles.push(new Collectible(820, levelHeight - 250, 'heart'));
+        collectibles.push(new Collectible(1450, levelHeight - 180, 'heart'));
         bossIntroTimer = 300; // 5-second intro hint
     }
     else if (levelNum === 5) {
-        levelWidth = 2000; // Twin Ponds level for World 2-2
-        platforms.push(new Platform(0, levelHeight - 40, 400, 40, 'brick')); // left shore
-        platforms.push(new Platform(750, levelHeight - 40, 350, 40, 'brick')); // middle shore
-        platforms.push(new Platform(1500, levelHeight - 40, 500, 40, 'brick')); // right shore
+        levelWidth = 2000; // World 2-2: a second plain Nippin field
+        platforms.push(new Platform(0, levelHeight - 40, 2000, 40, 'grass'));
+        platforms.push(new Platform(220, levelHeight - 150, 120, 20, 'brick'));
+        platforms.push(new Platform(540, levelHeight - 230, 120, 20, 'brick'));
+        platforms.push(new Platform(900, levelHeight - 140, 160, 20, 'brick'));
+        platforms.push(new Platform(1300, levelHeight - 210, 140, 20, 'brick'));
+        platforms.push(new Platform(1650, levelHeight - 140, 140, 20, 'brick'));
 
-        platforms.push(new Platform(200, levelHeight - 140, 100, 20, 'box'));
-        platforms.push(new Platform(520, levelHeight - 130, 80, 20, 'box'));
-        platforms.push(new Platform(900, levelHeight - 140, 100, 20, 'box'));
-        platforms.push(new Platform(1250, levelHeight - 130, 80, 20, 'box'));
-        platforms.push(new Platform(1650, levelHeight - 140, 120, 20, 'box'));
+        enemies.push(new Enemy(400, levelHeight - 100, 'nippin'));
+        enemies.push(new Enemy(600, levelHeight - 290, 'nippin'));
+        enemies.push(new Enemy(820, levelHeight - 100, 'nippin'));
+        enemies.push(new Enemy(1120, levelHeight - 100, 'nippin'));
+        enemies.push(new Enemy(1360, levelHeight - 270, 'nippin'));
+        enemies.push(new Enemy(1580, levelHeight - 100, 'nippin'));
+        enemies.push(new Enemy(1780, levelHeight - 200, 'nippin'));
 
-        // Spawn Ponds
-        ponds.push(new Pond(400, levelHeight - 110, 350, 110));
-        ponds.push(new Pond(1100, levelHeight - 110, 400, 110));
-
-        // Pushable Cubes
-        pushableBoxes.push(new PushableBox(250, levelHeight - 88, 48, 48));
-        pushableBoxes.push(new PushableBox(950, levelHeight - 88, 48, 48));
-
-        // Submerged Enemies
-        enemies.push(new Enemy(500, levelHeight - 80, 'nippin'));
-        enemies.push(new Enemy(1200, levelHeight - 80, 'nippin'));
-        enemies.push(new Enemy(1350, levelHeight - 80, 'nippin'));
-
-        // Normal Enemies
-        enemies.push(new Enemy(850, levelHeight - 100, 'nippin'));
-        enemies.push(new Enemy(1600, levelHeight - 100, 'nippin'));
-        enemies.push(new Enemy(600, levelHeight - 180, 'nippin'));
-        enemies.push(new Enemy(1300, levelHeight - 180, 'nippin'));
-        enemies.push(new Enemy(1750, levelHeight - 100, 'spark-bobby'));
-
-        // Collectibles
-        collectibles.push(new Collectible(520, levelHeight - 180, 'heart'));
-        collectibles.push(new Collectible(1250, levelHeight - 180, 'heart'));
-        collectibles.push(new Collectible(1750, levelHeight - 180, 'heart'));
+        collectibles.push(new Collectible(280, levelHeight - 190, 'heart'));
+        collectibles.push(new Collectible(960, levelHeight - 180, 'heart'));
+        collectibles.push(new Collectible(1710, levelHeight - 180, 'heart'));
         bossIntroTimer = 300; // 5-second intro hint
     }
     else if (levelNum === 6) {
-        levelWidth = 1100; // World 2-3 Final Boss arena
-        platforms.push(new Platform(0, levelHeight - 40, 450, 40, 'brick')); // solid brick floor left
-        platforms.push(new Platform(650, levelHeight - 40, 450, 40, 'brick')); // solid brick floor right
-        
+        levelWidth = 1000; // World 2-3: Poster boss arena
+        platforms.push(new Platform(0, levelHeight - 40, 1000, 40, 'brick'));
         platforms.push(new Platform(250, levelHeight - 140, 120, 20, 'box'));
         platforms.push(new Platform(730, levelHeight - 140, 120, 20, 'box'));
-
-        // Center pond and pushable cube
-        ponds.push(new Pond(450, levelHeight - 110, 200, 110));
-        pushableBoxes.push(new PushableBox(200, levelHeight - 88, 48, 48));
-
-        // Spawn the Nippin King as the second boss.
-        enemies.push(new Enemy(150, levelHeight - 100, 'nippin'));
-        enemies.push(new Enemy(340, levelHeight - 180, 'nippin'));
-        enemies.push(new Enemy(780, levelHeight - 100, 'nippin'));
-        enemies.push(new Enemy(960, levelHeight - 100, 'nippin'));
-        boss = new Boss(750, levelHeight - 136, 'nippin-king');
+        boss = new Boss(440, 110, 'poster');
         bossIntroTimer = 300; // 5-second intro hint
 
         // Collectible Hearts (World 2-3)
@@ -2977,21 +2939,20 @@ function loadLevel(levelNum) {
         collectibles.push(new Collectible(780, levelHeight - 180, 'heart'));
     }
     else if (levelNum === 7) {
-        levelWidth = 1800; // Space low-gravity stage
-        platforms.push(new Platform(0, levelHeight - 40, 500, 40, 'grass'));
-        platforms.push(new Platform(1000, levelHeight - 40, 800, 40, 'grass'));
-
-        // Elevated platforms to bridge the gap
-        platforms.push(new Platform(580, levelHeight - 140, 140, 20, 'brick'));
-        platforms.push(new Platform(800, levelHeight - 200, 100, 20, 'brick'));
-
-        // Space theme enemies
-        enemies.push(new Enemy(1200, levelHeight - 100, 'nippin'));
-        enemies.push(new Enemy(1450, levelHeight - 100, 'nippin'));
-
-        // Collectibles
-        collectibles.push(new Collectible(800, levelHeight - 240, 'heart'));
-        collectibles.push(new Collectible(1350, levelHeight - 180, 'heart'));
+        levelWidth = 1100; // World 3-1: Gray Pond and Blood Shark
+        platforms.push(new Platform(0, levelHeight - 40, 450, 40, 'brick'));
+        platforms.push(new Platform(650, levelHeight - 40, 450, 40, 'brick'));
+        platforms.push(new Platform(250, levelHeight - 140, 120, 20, 'box'));
+        platforms.push(new Platform(730, levelHeight - 140, 120, 20, 'box'));
+        ponds.push(new Pond(450, levelHeight - 110, 200, 110));
+        pushableBoxes.push(new PushableBox(200, levelHeight - 88, 48, 48));
+        enemies.push(new Enemy(150, levelHeight - 100, 'nippin'));
+        enemies.push(new Enemy(340, levelHeight - 180, 'nippin'));
+        enemies.push(new Enemy(760, levelHeight - 100, 'nippin'));
+        enemies.push(new Enemy(960, levelHeight - 100, 'nippin'));
+        boss = new Boss(750, levelHeight - 136, 'blood-shark');
+        collectibles.push(new Collectible(300, levelHeight - 180, 'heart'));
+        collectibles.push(new Collectible(780, levelHeight - 180, 'heart'));
         bossIntroTimer = 300;
     }
     else if (levelNum === 8) {
@@ -3512,14 +3473,14 @@ function checkCollisions() {
                     }
 
                     if (boss.hearts <= 0) {
-                        if (boss.type === 'booster') {
-                            progressToNextLevel(4);
+                        if (boss.type === 'poster') {
+                            progressToNextLevel(7);
                         } else if (boss.type === 'nippin-king') {
                             progressToNextLevel(4);
                         } else if (boss.type === 'madara') {
                             progressToNextLevel(13);
                         } else if (boss.type === 'blood-shark') {
-                            progressToNextLevel(7);
+                            progressToNextLevel(8);
                         } else if (boss.type === 'dragon-emperor') {
                             progressToNextLevel(10);
                         } else if (boss.type === 'star-empress') {
@@ -3543,9 +3504,9 @@ function checkCollisions() {
             player.y < boss.y + boss.h &&
             player.y + player.height > boss.y) {
             
-            if (boss.type === 'booster') {
+            if (boss.type === 'poster') {
                 if (boss.actionState === 'smashed') {
-                    // If Booster is smashed on the floor: touching him ELECTRIFIES and hurts him!
+                    // If Poster is smashed on the floor: touching him ELECTRIFIES and hurts him!
                     if (boss.invulnerableFrame <= 0) {
                         boss.hearts--;
                         boss.invulnerableFrame = 60; // 1 second invulnerability
@@ -3564,11 +3525,11 @@ function checkCollisions() {
                         }
                         
                         if (boss.hearts <= 0) {
-                            progressToNextLevel(4);
+                            progressToNextLevel(7);
                         }
                     }
                 } else {
-                    // Touching Booster while floating or rising damages the player!
+                    // Touching Poster while floating or rising damages the player!
                     player.takeDamage(1);
                 }
             } 
@@ -3633,7 +3594,7 @@ function checkCollisions() {
                         }
 
                         if (boss.hearts <= 0) {
-                            progressToNextLevel(7);
+                            progressToNextLevel(8);
                         }
                     } else {
                         // Whacking state: zaps player if they jump on him!
@@ -4235,7 +4196,7 @@ function gameLoop() {
         ctx.fillStyle = '#ff6b6b';
         ctx.font = '22px Gochi Hand';
         ctx.textAlign = 'center';
-        const bossTitle = boss.type === 'nippin-king' ? 'NIPPIN KING' : (boss.type === 'madara' ? 'MADARA' : (boss.type === 'blood-shark' ? 'BLOOD SHARK BOSS' : 'BOOSTER'));
+        const bossTitle = boss.type === 'nippin-king' ? 'NIPPIN KING' : (boss.type === 'madara' ? 'MADARA' : (boss.type === 'blood-shark' ? 'BLOOD SHARK BOSS' : 'POSTER'));
         ctx.fillText(bossTitle, canvas.width / 2, barY - 6);
     }
 
@@ -4251,25 +4212,30 @@ function gameLoop() {
         ctx.textAlign = 'center';
         
         if (currentLevel === 3) {
-            ctx.fillText('👑 BOSS BATTLE: BOOSTER!', canvas.width / 2, bannerY + 28);
-            ctx.font = '18px Patrick Hand';
-            ctx.fillStyle = '#ff922b';
-            ctx.fillText('Clear the Nippins, then touch Booster while he is smashed flat!', canvas.width / 2, bannerY + 52);
-        } else if (currentLevel === 4) {
-            ctx.fillText('🦈 WORLD 2-1: THE GRAY POND!', canvas.width / 2, bannerY + 28);
-            ctx.font = '18px Patrick Hand';
-            ctx.fillStyle = '#ff922b';
-            ctx.fillText('Press and hold UP to swim! Watch out for the wiggling shark fin!', canvas.width / 2, bannerY + 52);
-        } else if (currentLevel === 5) {
-            ctx.fillText('💧 WORLD 2-2: TWIN PONDS!', canvas.width / 2, bannerY + 28);
-            ctx.font = '18px Patrick Hand';
-            ctx.fillStyle = '#ff922b';
-            ctx.fillText('Slide the pushable cubes and clear the path to the flag!', canvas.width / 2, bannerY + 52);
-        } else if (currentLevel === 6) {
-            ctx.fillText('👑 WORLD 2-3 SECOND BOSS: NIPPIN KING!', canvas.width / 2, bannerY + 28);
+            ctx.fillText('👑 BOSS BATTLE: NIPPIN KING!', canvas.width / 2, bannerY + 28);
             ctx.font = '18px Patrick Hand';
             ctx.fillStyle = '#ff922b';
             ctx.fillText('Stomp the purple king while he bounces through the dungeon!', canvas.width / 2, bannerY + 52);
+        } else if (currentLevel === 4) {
+            ctx.fillText('🟣 WORLD 2-1: NIPPIN FIELD!', canvas.width / 2, bannerY + 28);
+            ctx.font = '18px Patrick Hand';
+            ctx.fillStyle = '#ff922b';
+            ctx.fillText('Keep moving and clear the rolling Nippins!', canvas.width / 2, bannerY + 52);
+        } else if (currentLevel === 5) {
+            ctx.fillText('🟣 WORLD 2-2: NIPPIN TRAIL!', canvas.width / 2, bannerY + 28);
+            ctx.font = '18px Patrick Hand';
+            ctx.fillStyle = '#ff922b';
+            ctx.fillText('Watch the high platforms and dodge every Nippin!', canvas.width / 2, bannerY + 52);
+        } else if (currentLevel === 6) {
+            ctx.fillText('👹 WORLD 2-3 BOSS: POSTER!', canvas.width / 2, bannerY + 28);
+            ctx.font = '18px Patrick Hand';
+            ctx.fillStyle = '#ff922b';
+            ctx.fillText('Wait for Poster to land flat, then touch him to electrify him!', canvas.width / 2, bannerY + 52);
+        } else if (currentLevel === 7) {
+            ctx.fillText('🦈 WORLD 3-1 BOSS: BLOOD SHARK!', canvas.width / 2, bannerY + 28);
+            ctx.font = '18px Patrick Hand';
+            ctx.fillStyle = '#ff922b';
+            ctx.fillText('Cross the Gray Pond, dodge the fin, and stomp the shark!', canvas.width / 2, bannerY + 52);
         } else if (currentLevel === 12) {
             ctx.fillText('🟣 WORLD 4-3 BOSS: MADARA!', canvas.width / 2, bannerY + 28);
             ctx.font = '18px Patrick Hand';
@@ -4322,7 +4288,9 @@ function drawFlagPole(x, y) {
 }
 
 function drawBackgroundElements() {
-    const worldNum = Math.ceil(currentLevel / 3);
+    // Level 7 is the restored Gray Pond/Blood Shark stage, so keep its visual
+    // theme with World 2 even though it remains the first level of World 3.
+    const worldNum = currentLevel === 7 ? 2 : Math.ceil(currentLevel / 3);
 
     // DRAW BASE PAPER
     if (currentLevel === 3 || currentLevel === 6) {
@@ -4854,25 +4822,22 @@ function drawBackgroundElements() {
         drawSketchySignpost(520, levelHeight - 140, 'LOOK UP! 🛩️', 520);
         drawSketchySignpost(1140, levelHeight - 120, 'DIG HERE! ⛏️', 1140);
     } else if (currentLevel === 4) {
-        ctx.fillStyle = 'rgba(255, 107, 107, 0.7)'; // red marker
+        drawSketchySignpost(180, levelHeight - 80, 'NIPPINS! ➔', 180);
+        ctx.fillStyle = 'rgba(155, 93, 229, 0.7)';
         ctx.font = '22px Gochi Hand';
-        ctx.fillText('DANGER ZONE! 🦈', 500, levelHeight - 150);
-        // Draw sketchy red arrow pointing down to the pond
-        drawSketchyLine(530, levelHeight - 130, 500, levelHeight - 110, 'rgba(255, 107, 107, 0.7)', 2, 456);
-        drawSketchyLine(500, levelHeight - 110, 510, levelHeight - 125, 'rgba(255, 107, 107, 0.7)', 2, 457);
-        drawSketchyLine(500, levelHeight - 110, 515, levelHeight - 115, 'rgba(255, 107, 107, 0.7)', 2, 458);
+        ctx.fillText('PURPLE FIELD!', 520, levelHeight - 160);
     } else if (currentLevel === 5) {
-        drawSketchySignpost(180, levelHeight - 80, 'PUSH! ➔', 180);
-        ctx.fillStyle = 'rgba(77, 171, 247, 0.7)'; // blue marker
+        drawSketchySignpost(180, levelHeight - 80, 'KEEP MOVING! ➔', 180);
+        ctx.fillStyle = 'rgba(155, 93, 229, 0.7)';
         ctx.font = '22px Gochi Hand';
-        ctx.fillText('DOUBLE POND!', 760, levelHeight - 160);
+        ctx.fillText('NIPPIN TRAIL!', 760, levelHeight - 160);
     } else if (currentLevel === 6) {
         drawSketchySignpost(150, levelHeight - 80, 'DEFLECT! ⚡', 150);
         ctx.fillStyle = 'rgba(255, 107, 107, 0.7)'; // red marker
         ctx.font = '22px Gochi Hand';
         ctx.fillText('BOSS ARENA 🥊', 460, 60);
     } else if (currentLevel === 7) {
-        drawSketchySignpost(300, levelHeight - 80, 'LOW GRAVITY! 🌌', 300);
+        drawSketchySignpost(300, levelHeight - 80, 'DODGE THE FIN! 🦈', 300);
     } else if (currentLevel === 8) {
         drawSketchySignpost(320, levelHeight - 80, 'PORTAL! 🌀', 320);
         // Draw Entry and Exit Portals
