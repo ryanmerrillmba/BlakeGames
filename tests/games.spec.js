@@ -85,6 +85,15 @@ test('Nut Throw Catch drops the yellow and blue Bear nuts in their special level
   await expect.poll(() => page.locator('.nut.blue').count(), { timeout: 5_000 }).toBeGreaterThan(0);
 });
 
+test('Nut Throw Catch includes the locked Lion boss progression and appearance choice', async ({ page }) => {
+  await blockThirdParties(page);
+  await page.goto('/nut-throw-catch/');
+  await expect(page.locator('#lion')).toBeAttached();
+  await expect(page.locator('#lionChoice')).toBeAttached();
+  await page.locator('#levelsBtn').click();
+  await expect(page.getByText('Defeat the Bird to unlock the Lion.')).toBeVisible();
+});
+
 test('10 Military Mills progresses from title through a hero selection into gameplay', async ({ page }) => {
   await blockThirdParties(page);
   await page.goto('/10-military-mills/');

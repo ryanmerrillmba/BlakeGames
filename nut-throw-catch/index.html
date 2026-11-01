@@ -200,3 +200,46 @@ const game=document.querySelector('#game'),hero=document.querySelector('#hero'),
     }
   },2400);
 </script>
+<style>
+  .lion{display:none;right:8%;bottom:13%;width:220px;height:245px;z-index:6;filter:drop-shadow(4px 5px 0 #3b251d)}
+  .lion-mane{position:absolute;left:36px;top:0;width:132px;height:118px;background:#b96d35;border:5px solid #3b251d;border-radius:50%;z-index:1}
+  .lion-head{position:absolute;left:51px;top:15px;width:102px;height:93px;background:#d39a55;border:4px solid #3b251d;border-radius:48%;z-index:2}
+  .lion-ear{position:absolute;top:-17px;width:34px;height:34px;background:#c47d3c;border:4px solid #3b251d;border-radius:50%}.lion-ear.left{left:2px}.lion-ear.right{right:2px}
+  .lion-eye{position:absolute;top:32px;width:12px;height:16px;background:#24120c;border-radius:50%}.lion-eye.left{left:25px}.lion-eye.right{right:25px}
+  .lion-muzzle{position:absolute;left:27px;bottom:8px;width:48px;height:29px;background:#e3bd8b;border:3px solid #3b251d;border-radius:50%}.lion-muzzle:after{content:"";position:absolute;left:18px;top:4px;width:11px;height:8px;background:#3b251d;border-radius:50%}
+  .lion-body{position:absolute;left:40px;top:91px;width:136px;height:125px;background:#8da35c;border:5px solid #3b251d;border-radius:48% 48% 28% 28%;z-index:1}
+  .lion-belly{position:absolute;left:24px;top:20px;width:82px;height:82px;background:#c8ac70;border:3px solid #70502e;border-radius:50%}
+  .lion-leg{position:absolute;top:184px;width:38px;height:58px;background:#8da35c;border:5px solid #3b251d;border-radius:20px;z-index:2}.lion-leg.left{left:57px}.lion-leg.right{right:57px}
+  .lion-paw{position:absolute;bottom:-13px;left:-7px;width:48px;height:35px;background:#c89455;border:4px solid #3b251d;border-radius:50%}
+  .lion-arm{position:absolute;top:111px;width:42px;height:86px;background:#8da35c;border:5px solid #3b251d;border-radius:28px;z-index:3}.lion-arm.left{left:15px;transform:rotate(22deg)}.lion-arm.right{right:15px;transform:rotate(-22deg)}
+  .lion-tail{position:absolute;right:0;bottom:55px;width:72px;height:100px;border:12px solid #8da35c;border-left:0;border-bottom:0;border-radius:0 60px 0 0;transform:rotate(12deg);z-index:0}.lion-tail:after{content:"";position:absolute;right:-15px;top:-13px;width:32px;height:32px;background:#b96d35;border:5px solid #3b251d;border-radius:50%}
+  .lion-stage2 .lion-leg,.lion-stage2 .lion-paw{background:#4f9d58}
+  .lion-stage2 .lion-body{background:#789653}
+  .lion-stage3 .lion-body{background:#84935b}
+  .lion-gold .lion-mane{background:#d89c32}.lion-gold .lion-leg,.lion-gold .lion-paw{background:#4f9d58}
+  .lion-forest .lion-mane{background:#8a5a35}.lion-forest .lion-body{background:#71884f}.lion-forest .lion-leg,.lion-forest .lion-paw{background:#5ba25d}
+  .lion-sunset .lion-mane{background:#9c4f38}.lion-sunset .lion-body{background:#9b8652}.lion-sunset .lion-leg,.lion-sunset .lion-paw{background:#629b57}
+  .lion-choice{text-align:center;color:#2a2025}.lion-choice h2{margin:0 0 6px;color:#633c29}.lion-choice p{font-weight:700;line-height:1.35}.lion-choice-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}.lion-choice-grid button{min-height:86px;background:#fff7dc}.lion-choice-grid button strong{display:block;font-size:1rem}.lion-choice-grid button small{display:block;margin-top:5px;font-weight:700}.lion-choice-grid .choice-gold{border-color:#c2871f}.lion-choice-grid .choice-forest{border-color:#4f9d58}.lion-choice-grid .choice-sunset{border-color:#9c4f38}
+  @media(max-width:560px){.lion{right:0;transform:scale(.75);transform-origin:bottom right}.lion-choice-grid{grid-template-columns:1fr}}
+</style>
+<script>
+  let lionStage=1,lionLook='lion-sage',lionUnlocked=false,lionChoicePending=false;
+  game.insertAdjacentHTML('beforeend', `<div class="boss lion" id="lion" aria-label="Lion boss">
+    <div class="lion-tail"></div><div class="lion-mane"></div><div class="lion-head"><i class="lion-ear left"></i><i class="lion-ear right"></i><i class="lion-eye left"></i><i class="lion-eye right"></i><i class="lion-muzzle"></i></div>
+    <div class="lion-body"><div class="lion-belly"></div></div><div class="lion-arm left"></div><div class="lion-arm right"></div><div class="lion-leg left"><i class="lion-paw"></i></div><div class="lion-leg right"><i class="lion-paw"></i></div>
+  </div><div class="modal lion-choice" id="lionChoice" role="dialog" aria-modal="true" aria-labelledby="lionChoiceTitle"><h2 id="lionChoiceTitle">🦁 Choose the Lion's Look</h2><p>The lion cannot be fully green. Pick a mane and body style for the third encounter.</p><div class="lion-choice-grid"><button class="choice-gold" data-lion-look="lion-gold"><strong>Golden Mane</strong><small>Warm mane, green paws</small></button><button class="choice-forest" data-lion-look="lion-forest"><strong>Forest Tips</strong><small>Brown mane, green body</small></button><button class="choice-sunset" data-lion-look="lion-sunset"><strong>Sunset Lion</strong><small>Red mane, green paws</small></button></div></div>`);
+  const lion=document.querySelector('#lion'),lionChoice=document.querySelector('#lionChoice');
+  function hideAllBosses(){[bear,cater,bird,lion].forEach(element=>element.style.display='none')}
+  function showLion(){hideAllBosses();lion.style.display='block'}
+  function lionSource(l){return ['brown','yellow','blue','red','ice','fire','green','moss','black'][Math.max(0,Math.min(8,l-1))]}
+  const uiBeforeLion=ui;
+  ui=function(){uiBeforeLion();document.querySelector('#maxLevel').textContent='9';if(boss==='lion'){document.querySelector('#bossName').textContent='Lion';game.className='lion-stage'+lionStage+' '+lionLook;lion.style.right=(100-bossX)+'%'}};
+  function showLionChoice(){lionChoice.style.display='block';lionChoicePending=true;live=false}
+  function chooseLionLook(look){lionLook=look;lionChoice.style.display='none';lionChoicePending=false;live=true;ui()}
+  document.querySelectorAll('[data-lion-look]').forEach(button=>button.onclick=()=>chooseLionLook(button.dataset.lionLook));
+  function enterLion(stage){lionUnlocked=true;boss='lion';lionStage=stage;level=1;hp=5;nuts=0;source=lionSource(level);bossX=84;showLion();lionLook='lion-sage';ui();if(stage===3)showLionChoice();else live=true}
+  function startLevelWithLion(b,l){if(b==='lion'&&!lionUnlocked)return;if(b==='lion'&&lionStage===3&&lionLook==='lion-sage')showLionChoice();boss=b;level=l;hp=5;nuts=0;live=!lionChoicePending;source=b==='lion'?lionSource(l):specialSource(b,l);if(b==='lion')showLion();else{hideAllBosses();(b==='bear'?bear:b==='caterpillar'?cater:bird).style.display='block'}wire.style.display=l===2?'block':'none';yellowTree.style.display=l===2?'block':'none';blueTree.style.display=l>=3?'block':'none';wirePulled=false;cage.classList.remove('falling');levels.style.display='none';ui()}
+  function renderLevelsWithLion(){levels.style.display='block';levelList.innerHTML='';for(const b of['bear','caterpillar','bird'])for(let i=1;i<=9;i++){let q=document.createElement('button');q.className='levelButton';q.textContent=(b==='bear'?'🐻 Bear ':b==='caterpillar'?'🐛 Caterpillar ':'🐦 Bird ')+'Level '+i;q.onclick=()=>startLevelWithLion(b,i);levelList.append(q)}if(lionUnlocked)for(let i=1;i<=9;i++){let q=document.createElement('button');q.className='levelButton';q.textContent='🦁 Lion Level '+i;q.onclick=()=>startLevelWithLion('lion',i);levelList.append(q)}let p=document.createElement('p');p.textContent=lionUnlocked?'The Lion has three encounters.':'Defeat the Bird to unlock the Lion.';levelList.append(p)}
+  function damageWithLion(){hp--;if(hp>0){ui();return}let key=boss+'Wins';localStorage.setItem(key,String(Number(localStorage.getItem(key)||0)+1));if(level<9){level++;hp=5;nuts=0;source=boss==='lion'?lionSource(level):specialSource(boss,level);if(level===2)wire.style.display='block';ui();return}if(boss==='bear'){boss='caterpillar';level=1;hp=5;nuts=0;source='red';hideAllBosses();cater.style.display='block';ui()}else if(boss==='caterpillar'){boss='bird';level=1;hp=5;nuts=0;source='green';hideAllBosses();bird.style.display='block';ui()}else if(boss==='bird'){enterLion(1)}else if(boss==='lion'&&lionStage<3){enterLion(lionStage+1)}else{live=false;alert('You beat the Lion!')}}
+  damage=damageWithLion;startLevel=startLevelWithLion;document.querySelector('#levelsBtn').onclick=renderLevelsWithLion;
+</script>
