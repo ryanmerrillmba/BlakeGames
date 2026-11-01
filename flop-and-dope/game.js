@@ -1202,7 +1202,7 @@ class Enemy {
             drawSketchyCircle(cx + 5, cy - 3 + pulse, 1, '#2b2b2b', '#2b2b2b', seed + 4);
             drawSketchyLine(cx - 4, cy + 6 + pulse, cx + 4, cy + 6 + pulse, '#3b1f66', 1.5, seed + 5);
         } else if (this.type === 'spark-bobby') {
-            // Draw a wiggling/crackling yellow Spark Bobby
+            // Draw a wiggling/crackling yellow Spark Ball
             const pulse = Math.sin(Date.now() / 80) * 3;
             const seed = Math.floor(this.x * 11 + this.y * 13);
             drawWildHair(cx, cy, 11 + pulse, '#ffd43b', seed);
@@ -1947,7 +1947,7 @@ class Boss {
             }
         }
         else if (this.type === 'madara') {
-            // Madara is a later boss built from the old Matera artwork.
+            // Madora is a later boss built from the old artwork.
             this.wobbleTimer += 0.14;
             this.x += this.vx;
             if (this.x < 100 || this.x > levelWidth - 100 - this.w) {
@@ -2477,7 +2477,7 @@ class Boss {
             ctx.fillStyle = '#ffd43b';
             ctx.font = '22px Gochi Hand';
             ctx.textAlign = 'center';
-            ctx.fillText('MADARA', this.x + this.w / 2, this.y - 10);
+            ctx.fillText('Madora', this.x + this.w / 2, this.y - 10);
         }
         else if (this.type === 'spark-bobby-boss') {
             const cx = this.x + this.w / 2;
@@ -2493,7 +2493,7 @@ class Boss {
             ctx.fillStyle = '#ff922b';
             ctx.font = '20px Gochi Hand';
             ctx.textAlign = 'center';
-            ctx.fillText('SPARK BOBBY', cx, this.y - 12);
+            ctx.fillText('SPARK BALL', cx, this.y - 12);
         }
         else if (this.type === 'blood-shark') {
             const img = enemyImages['blood-shark'];
@@ -2769,8 +2769,8 @@ function getLevelName(levelNum) {
         7: 'Level 7', 8: 'Level 8', 9: 'Level 9 (Blood Shark)',
         10: 'Level 10', 11: 'Level 11', 12: 'Level 12 (Dragon Boss)',
         13: 'Level 13', 14: 'Level 14', 15: 'Level 15 (Ladybug)',
-        16: 'Level 16', 17: 'Level 17', 18: 'Level 18 (Madara)',
-        19: 'Level 19', 20: 'Level 20', 21: 'Level 21 (Spark Bobby)',
+        16: 'Level 16', 17: 'Level 17', 18: 'Level 18 (Madora)',
+        19: 'Level 19', 20: 'Level 20', 21: 'Level 21 (Spark Ball)',
         22: 'Level 22', 23: 'Level 23', 24: 'Level 24 (Final Boss)'
     };
     return names[levelNum] || 'Level ' + levelNum;
@@ -2806,12 +2806,12 @@ function progressToNextLevel(nextLevelNum) {
         subtitle = "Prepare for two more levels before Ladybug!";
     } else if (currentLevel === 15) {
         title = "LADYBUG DEFEATED! 🐞";
-        subtitle = "Prepare for two more levels before Madara!";
+        subtitle = "Prepare for two more levels before Madora!";
     } else if (currentLevel === 18) {
-        title = "MADARA DEFEATED! 🟣";
-        subtitle = "Prepare for two more levels before Spark Bobby!";
+        title = "Madora DEFEATED! 🟣";
+        subtitle = "Prepare for two more levels before Spark Ball!";
     } else if (currentLevel === 21) {
-        title = "SPARK BOBBY DEFEATED! ⚡";
+        title = "SPARK BALL DEFEATED! ⚡";
         subtitle = "Prepare for two more levels before the Final Boss!";
     } else if (currentLevel === 24) {
         title = "DUNGEON EMPEROR DEFEATED! 👑";
@@ -3188,7 +3188,7 @@ function loadLevel(levelNum) {
         bossIntroTimer = 300;
     }
     else if (levelNum === 18) {
-        levelWidth = 1100; // Madara boss arena
+        levelWidth = 1100; // Madora boss arena
         platforms.push(new Platform(0, levelHeight - 40, 1100, 40, 'brick'));
         platforms.push(new Platform(350, levelHeight - 140, 400, 20, 'brick'));
         boss = new Boss(500, levelHeight - 120, 'madara');
@@ -3216,7 +3216,7 @@ function loadLevel(levelNum) {
         bossIntroTimer = 300;
     }
     else if (levelNum === 21) {
-        levelWidth = 1100; // Spark Bobby boss arena
+        levelWidth = 1100; // Spark Ball boss arena
         platforms.push(new Platform(0, levelHeight - 40, 1100, 40, 'brick'));
         platforms.push(new Platform(250, levelHeight - 160, 140, 20, 'brick'));
         platforms.push(new Platform(710, levelHeight - 220, 140, 20, 'brick'));
@@ -3462,7 +3462,7 @@ function checkCollisions() {
                     
                     proj.active = false;
                     
-                    // Spawn a Spark Bobby just above the platform top
+                    // Spawn a Spark Ball just above the platform top
                     const sparkBall = new Enemy(proj.x - 12, p.y - 24, 'spark-bobby');
                     // Move in player's direction
                     if (player) {
@@ -4260,7 +4260,7 @@ function gameLoop() {
         ctx.fillStyle = '#ff6b6b';
         ctx.font = '22px Gochi Hand';
         ctx.textAlign = 'center';
-        const bossTitle = boss.type === 'nippin-king' ? 'NIPPIN KING' : (boss.type === 'madara' ? 'MADARA' : (boss.type === 'blood-shark' ? 'BLOOD SHARK BOSS' : (boss.type === 'dragon-emperor' ? 'DRAGON BOSS' : (boss.type === 'star-empress' ? 'LADYBUG' : (boss.type === 'spark-bobby-boss' ? 'SPARK BOBBY' : (boss.type === 'dungeon-overlord' ? 'DUNGEON EMPEROR' : 'POSTER'))))));
+        const bossTitle = boss.type === 'nippin-king' ? 'NIPPIN KING' : (boss.type === 'madara' ? 'Madora' : (boss.type === 'blood-shark' ? 'BLOOD SHARK BOSS' : (boss.type === 'dragon-emperor' ? 'DRAGON BOSS' : (boss.type === 'star-empress' ? 'LADYBUG' : (boss.type === 'spark-bobby-boss' ? 'SPARK BALL' : (boss.type === 'dungeon-overlord' ? 'DUNGEON EMPEROR' : 'POSTER'))))));
         ctx.fillText(bossTitle, canvas.width / 2, barY - 6);
     }
 
@@ -4321,15 +4321,15 @@ function gameLoop() {
             ctx.fillStyle = '#ff922b';
             ctx.fillText('Stun Ladybug, then stomp her shell!', canvas.width / 2, bannerY + 52);
         } else if (currentLevel === 18) {
-            ctx.fillText('🟣 BOSS BATTLE: MADARA!', canvas.width / 2, bannerY + 28);
+            ctx.fillText('🟣 BOSS BATTLE: Madora!', canvas.width / 2, bannerY + 28);
             ctx.font = '18px Patrick Hand';
             ctx.fillStyle = '#ff922b';
-            ctx.fillText('Jump on Madara when he lands, then dodge his sparks!', canvas.width / 2, bannerY + 52);
+            ctx.fillText('Jump on Madora when he lands, then dodge his sparks!', canvas.width / 2, bannerY + 52);
         } else if (currentLevel === 21) {
-            ctx.fillText('⚡ BOSS BATTLE: SPARK BOBBY!', canvas.width / 2, bannerY + 28);
+            ctx.fillText('⚡ BOSS BATTLE: SPARK BALL!', canvas.width / 2, bannerY + 28);
             ctx.font = '18px Patrick Hand';
             ctx.fillStyle = '#ff922b';
-            ctx.fillText('Jump on the crackling Spark Bobby while it bounces!', canvas.width / 2, bannerY + 52);
+            ctx.fillText('Jump on the crackling Spark Ball while it bounces!', canvas.width / 2, bannerY + 52);
         } else if (currentLevel === 24) {
             ctx.fillText('👑 FINAL BOSS: DUNGEON EMPEROR!', canvas.width / 2, bannerY + 28);
             ctx.font = '18px Patrick Hand';
@@ -4989,11 +4989,11 @@ function drawBackgroundElements() {
     } else if (currentLevel === 18) {
         ctx.fillStyle = 'rgba(177, 151, 252, 0.8)';
         ctx.font = '24px Gochi Hand';
-        ctx.fillText('MADARA BOSS ARENA 🟣', 420, 50);
+        ctx.fillText('Madora BOSS ARENA 🟣', 420, 50);
     } else if (currentLevel === 21) {
         ctx.fillStyle = 'rgba(255, 212, 59, 0.8)';
         ctx.font = '24px Gochi Hand';
-        ctx.fillText('SPARK BOBBY BOSS ARENA ⚡', 360, 50);
+        ctx.fillText('SPARK BALL BOSS ARENA ⚡', 360, 50);
     } else if (currentLevel === 24) {
         ctx.fillStyle = 'rgba(255, 107, 107, 0.8)';
         ctx.font = '24px Gochi Hand';
