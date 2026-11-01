@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en" data-game="flop-and-dope">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flope & Dope - Sketchbook Adventure</title>
+    <link rel="stylesheet" href="style.css?v=flop-dope-1">
+    <!-- Google Fonts for hand-drawn look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=Patrick+Hand&display=swap" rel="stylesheet">
+    <script defer src="../telemetry.js"></script>
+</head>
+<body>
+    <div class="notebook-container">
+        <!-- Notebook Header/Spiral Rings (for aesthetic) -->
+        <div class="spiral-rings">
+            <div class="ring"></div>
+            <div class="ring"></div>
+            <div class="ring"></div>
+            <div class="ring"></div>
+            <div class="ring"></div>
+            <div class="ring"></div>
+            <div class="ring"></div>
+            <div class="ring"></div>
+        </div>
+
+        <div class="notebook-page">
+            <header>
+                <h1 class="crayon-title">Flope & Dope</h1>
+                <p class="crayon-subtitle">Sketchbook Adventure!</p>
+            </header>
+
+            <!-- Notebook Navigation Tabs -->
+            <div class="notebook-tabs">
+                <button id="tab-play" class="tab-btn active">🎮 Play Game</button>
+                <button id="tab-guide" class="tab-btn">📖 Monster Guide</button>
+            </div>
+
+            <!-- character selector screen -->
+            <div id="character-select-screen" class="screen active">
+                <h2 class="section-title">Choose Your Hero!</h2>
+                
+                <div class="character-grid">
+                    <!-- Hero 1: Giant Dad -->
+                    <div class="character-card" data-hero="giant-dad">
+                        <div class="card-sketch">
+                            <img src="assets/characters/giant-dad.png" class="hero-card-img" alt="Giant Dad">
+                        </div>
+                        <h3>Giant Dad</h3>
+                        <p class="power-desc"><strong>Super Power:</strong> Big & Heavy!</p>
+                        <p class="stats">Speed: 🚶 | Jump: 🦘🦘 | Ground Pound: 💥💥💥</p>
+                    </div>
+
+                    <!-- Hero 2: Hip-P -->
+                    <div class="character-card" data-hero="hip-p">
+                        <div class="card-sketch">
+                            <img src="assets/characters/hip-p.png" class="hero-card-img" alt="Hip-P">
+                        </div>
+                        <h3>Hip-P</h3>
+                        <p class="power-desc"><strong>Super Power:</strong> Sneaking! (Can crawl & hide)</p>
+                        <p class="stats">Speed: 🚶🚶 | Jump: 🦘🦘 | Sneak: 🥷🥷🥷</p>
+                    </div>
+
+                    <!-- Hero 3: Tuskanty -->
+                    <div class="character-card" data-hero="tuskanty">
+                        <div class="card-sketch">
+                            <img src="assets/characters/tuskanty.png" class="hero-card-img" alt="Tuskanty">
+                        </div>
+                        <h3>Tuskanty</h3>
+                        <p class="power-desc"><strong>Super Power:</strong> Digging!</p>
+                        <p class="stats">Speed: 🚶🚶 | Jump: 🦘🦘 | Dig: ⛏️⛏️⛏️</p>
+                    </div>
+
+                    <!-- Hero 4: Among Us Ben -->
+                    <div class="character-card" data-hero="among-us-ben">
+                        <div class="card-sketch">
+                            <img src="assets/characters/among-us-ben.png" class="hero-card-img" alt="Among Us Ben">
+                        </div>
+                        <h3>Among Us Ben</h3>
+                        <p class="power-desc"><strong>Super Power:</strong> Super Speed! (1 Arm)</p>
+                        <p class="stats">Speed: 🚶🚶🚶 | Jump: 🦘🦘 | Fast: ⚡⚡⚡</p>
+                    </div>
+
+                    <!-- Hero 5: Hosco -->
+                    <div class="character-card" data-hero="hosco">
+                        <div class="card-sketch">
+                            <img src="assets/characters/hosco.png" class="hero-card-img" alt="Hosco">
+                        </div>
+                        <h3>Hosco</h3>
+                        <p class="power-desc"><strong>Super Power:</strong> Box Bounce!</p>
+                        <p class="stats">Speed: 🚶🚶 | Jump: 🦘🦘🦘 | Box: 📦📦📦</p>
+                    </div>
+
+                    <!-- Hero 6: Electro -->
+                    <div class="character-card" data-hero="electro">
+                        <div class="card-sketch">
+                            <img src="assets/characters/electro.png" class="hero-card-img" alt="Electro">
+                        </div>
+                        <h3>Electro</h3>
+                        <p class="power-desc"><strong>Super Power:</strong> Electric Zap!</p>
+                        <p class="stats">Speed: 🚶🚶 | Jump: 🦘🦘 | Zap: ⚡⚡⚡</p>
+                    </div>
+                </div>
+
+                <div class="level-select-container" style="text-align: center; margin-bottom: 25px;">
+                    <h3 class="section-subtitle" style="font-size: 1.5rem; margin-bottom: 12px; text-decoration: underline wavy var(--crayon-blue); display: inline-block;">Select Start Level</h3>
+                    <div class="level-buttons-grid" style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 10px;">
+                        <button class="level-select-btn" data-level="1">Lvl 1 (1-1)</button>
+                        <button class="level-select-btn" data-level="2">Lvl 2 (1-2)</button>
+                        <button class="level-select-btn active" data-level="3">Lvl 3 (1-3 👹)</button>
+                        <button class="level-select-btn" data-level="4">Lvl 4 (2-1 🦈)</button>
+                        <button class="level-select-btn" data-level="5">Lvl 5 (2-2 💧)</button>
+                        <button class="level-select-btn" data-level="6">Lvl 6 (2-3 🦈👑)</button>
+                        <button class="level-select-btn" data-level="7">Lvl 7 (3-1 🌌)</button>
+                        <button class="level-select-btn" data-level="8">Lvl 8 (3-2 🌀)</button>
+                        <button class="level-select-btn" data-level="9">Lvl 9 (3-3 🐉)</button>
+                        <button class="level-select-btn" data-level="10">Lvl 10 (4-1 🌋)</button>
+                        <button class="level-select-btn" data-level="11">Lvl 11 (4-2 💣)</button>
+                        <button class="level-select-btn" data-level="12">Lvl 12 (4-3 🐞)</button>
+                        <button class="level-select-btn" data-level="13">Lvl 13 (5-1 ❄️)</button>
+                        <button class="level-select-btn" data-level="14">Lvl 14 (5-2 👥)</button>
+                        <button class="level-select-btn" data-level="15">Lvl 15 (5-3 ⚔️)</button>
+                        <button class="level-select-btn" data-level="16">Lvl 16 (6-1)</button>
+                        <button class="level-select-btn" data-level="17">Lvl 17 (6-2)</button>
+                        <button class="level-select-btn" data-level="18">Lvl 18 (6-3 👑)</button>
+                    </div>
+                </div>
+
+                <div class="action-container">
+                    <button id="start-game-btn" class="crayon-button" disabled>Select a Hero First!</button>
+                </div>
+            </div>
+
+            <!-- monster guide screen -->
+            <div id="monster-guide-screen" class="screen">
+                <h2 class="section-title">Monster Field Guide</h2>
+                <p class="guide-subtitle">Here is how to defeat the bad guys from your drawings!</p>
+                
+                <div class="guide-grid">
+                    <!-- Boss: Poster -->
+                    <div class="guide-card animate-wiggle">
+                        <div class="guide-img-container">
+                            <img src="assets/enemies/dungeon-king.png" class="guide-img" alt="Poster">
+                        </div>
+                        <h3>Poster (World 1 Boss)</h3>
+                        <p class="guide-desc"><strong>Behavior:</strong> A giant grey face that hovers, locks onto you, and slams down to the floor!</p>
+                        <p class="guide-method"><strong>How to Beat:</strong> 🏃 Move away to avoid getting squashed! Once he lands flat and is smashed on the floor, run up and touch him to ⚡️ electrify and damage him!</p>
+                    </div>
+
+                    <!-- Mini-Boss: Dragon Wing -->
+                    <div class="guide-card">
+                        <div class="guide-img-container">
+                            <img src="assets/enemies/dragon-wing.png" class="guide-img" alt="Dragon Wing">
+                        </div>
+                        <h3>Dragon Wing</h3>
+                        <p class="guide-desc"><strong>Behavior:</strong> Flies and spits out yellow zaps that hit platforms and turn into spark-balls!</p>
+                        <p class="guide-method"><strong>How to Beat:</strong> Jump on his head or shoot electric zaps at him from below!</p>
+                    </div>
+
+                    <!-- Enemy: Blood Shark -->
+                    <div class="guide-card">
+                        <div class="guide-img-container">
+                            <img src="assets/enemies/blood-shark.png" class="guide-img" alt="Blood Shark">
+                        </div>
+                        <h3>Blood Shark</h3>
+                        <p class="guide-desc"><strong>Behavior:</strong> Hops like a bouncy electric creature and shoots bouncing zaps. He can also fire a horizontal stream of lasers!</p>
+                        <p class="guide-method"><strong>How to Beat:</strong> Jump on his head when he is not whacking, or deflect his bouncing zaps. Push the **Blood Shark Cube** (or spawn boxes as Hosco) in front of his lasers to bounce them back and stun him!</p>
+                    </div>
+
+                    <!-- Hazard: Gray Pond -->
+                    <div class="guide-card">
+                        <div class="guide-img-container" style="background: rgba(128, 138, 148, 0.45); display: flex; align-items: center; justify-content: center; height: 100px; border-radius: 8px; border: 2px dashed #2b2b2b;">
+                            <span style="font-size: 36px;">💧</span>
+                        </div>
+                        <h3>Gray Pond</h3>
+                        <p class="guide-desc"><strong>Behavior:</strong> Murky, slow-sinking water in World 2-1. Submerged enemies move slowly along the bottom.</p>
+                        <p class="guide-method"><strong>How to Navigate:</strong> Press and hold UP to swim upward and leap out of the water! Avoid staying under too long.</p>
+                    </div>
+
+                    <!-- Hazard: Shark Fin -->
+                    <div class="guide-card">
+                        <div class="guide-img-container" style="background: #faf6ee; display: flex; align-items: center; justify-content: center; height: 100px; border-radius: 8px; border: 2px dashed #2b2b2b;">
+                            <span style="font-size: 36px;">🦈</span>
+                        </div>
+                        <h3>Shark Fin Hazard</h3>
+                        <p class="guide-desc"><strong>Behavior:</strong> A wiggling gray fin swimming back and forth across the Gray Pond's surface.</p>
+                        <p class="guide-method"><strong>How to Avoid:</strong> Dodge the fin! Touching it deals 1 damage and pops the player high into the air.</p>
+                    </div>
+
+                    <!-- Enemy: Spark-Ball -->
+                    <div class="guide-card">
+                        <div class="guide-img-container spark-card-icon">
+                            <div class="guide-spark-placeholder">⚡️💥</div>
+                        </div>
+                        <h3>Spark-Ball</h3>
+                        <p class="guide-desc"><strong>Behavior:</strong> Spawns when electric zaps hit a platform. Crawls quickly back and forth.</p>
+                        <p class="guide-method"><strong>How to Beat:</strong> Jump on his head to squash him, or defeat him using Electro's zaps!</p>
+                    </div>
+
+                    <!-- Enemy: Matera -->
+                    <div class="guide-card">
+                        <div class="guide-img-container">
+                            <img src="assets/enemies/matera.png" class="guide-img" alt="Matera">
+                        </div>
+                        <h3>Matera</h3>
+                        <p class="guide-desc"><strong>Behavior:</strong> A purple round creature with big cute eyes that walks back and forth.</p>
+                        <p class="guide-method"><strong>How to Beat:</strong> Jump on its head to squash it, or zap it!</p>
+                    </div>
+
+                    <!-- Enemy: Star-Shell Bug -->
+                    <div class="guide-card">
+                        <div class="guide-img-container">
+                            <img src="assets/enemies/star-shell-bug.png" class="guide-img" alt="Star-Shell Bug">
+                        </div>
+                        <h3>Star-Shell Bug</h3>
+                        <p class="guide-desc"><strong>Behavior:</strong> Crawls slowly, protected by a shell with a red star.</p>
+                        <p class="guide-method"><strong>How to Beat:</strong> Jump on its head to squash it, or zap it!</p>
+                    </div>
+
+                    <!-- Final Boss: Dungeon Emperor -->
+                    <div class="guide-card">
+                        <div class="guide-img-container" style="overflow: hidden;">
+                            <img src="assets/enemies/dungeon-emperor.png" class="guide-img" alt="Dungeon Emperor">
+                        </div>
+                        <h3>Dungeon Emperor (Final Boss)</h3>
+                        <p class="guide-desc"><strong>Behavior:</strong> Spawns in World 5-3. Combines ground slams, horizontal lasers, and triple electric zaps!</p>
+                        <p class="guide-method"><strong>How to Beat:</strong> Dodge his lasers and zaps. When he slams flat on the ground, touch him to damage him. Defeat him to win the game!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- gameplay screen -->
+            <div id="gameplay-screen" class="screen">
+                <div class="game-hud">
+                    <div class="hud-item active-hero-hud">
+                        <span>Hero:</span> <span id="hud-hero-name" class="highlight-text">Giant Dad</span>
+                    </div>
+                    <div class="hud-item hearts-hud">
+                        <span>Hearts:</span> <span id="hud-hearts" class="hearts-text">❤️❤️❤️</span>
+                    </div>
+                    <div class="hud-item level-hud" style="display: flex; align-items: center;">
+                        <span>Level:</span>
+                        <select id="hud-level-select" class="hud-select">
+                            <option value="1">Lvl 1 (World 1-1)</option>
+                            <option value="2">Lvl 2 (World 1-2)</option>
+                            <option value="3">Lvl 3 (World 1-3) 👹</option>
+                            <option value="4">Lvl 4 (World 2-1) 🦈</option>
+                            <option value="5">Lvl 5 (World 2-2) 💧</option>
+                            <option value="6">Lvl 6 (World 2-3) 🦈👑</option>
+                            <option value="7">Lvl 7 (World 3-1) 🌌</option>
+                            <option value="8">Lvl 8 (World 3-2) 🌀</option>
+                            <option value="9">Lvl 9 (World 3-3) 🐉</option>
+                            <option value="10">Lvl 10 (World 4-1) 🌋</option>
+                            <option value="11">Lvl 11 (World 4-2) 💣</option>
+                            <option value="12">Lvl 12 (World 4-3) 🐞</option>
+                            <option value="13">Lvl 13 (World 5-1) ❄️</option>
+                            <option value="14">Lvl 14 (World 5-2) 👥</option>
+                            <option value="15">Lvl 15 (World 5-3) ⚔️</option>
+                            <option value="16">Lvl 16 (World 6-1)</option>
+                            <option value="17">Lvl 17 (World 6-2)</option>
+                            <option value="18">Lvl 18 (World 6-3) 👑</option>
+                        </select>
+                    </div>
+                    <button id="back-to-menu-btn" class="crayon-button small-btn">Main Menu</button>
+                </div>
+
+                <div class="canvas-frame">
+                    <canvas id="gameCanvas" width="800" height="400"></canvas>
+                    <div id="game-over-overlay" class="canvas-overlay">
+                        <h2 class="game-over-title">Game Over!</h2>
+                        <button id="restart-btn" class="crayon-button">Try Again!</button>
+                    </div>
+                </div>
+
+                <div class="game-controls-info">
+                    <div class="controls-grid">
+                        <div class="control-box">
+                            <h3>Keyboard Controls</h3>
+                            <p>🚶 <strong>Move Left / Right:</strong> Left/Right Arrows (or A/D)</p>
+                            <p>🦘 <strong>Jump:</strong> Up Arrow (or W / Space)</p>
+                            <p>💥 <strong>Ground Pound:</strong> Down Arrow (or S) while in mid-air!</p>
+                            <p>🥷 <strong>Sneak (Hip-P only):</strong> Hold Down Arrow on the ground to shrink!</p>
+                            <p>⛏️ <strong>Dig (Tuskanty only):</strong> Hold Down Arrow while standing on brown dirt blocks!</p>
+                            <p>📦 <strong>Box Bounce (Hosco only):</strong> Jump, then press Up Arrow again in mid-air!</p>
+                        </div>
+                        
+                        <div class="control-box boss-hint-box">
+                            <h3>How to Beat the Boss (Poster) 👹</h3>
+                            <p>1. 🏃 **Run away** when he drops from the sky to avoid getting squashed!</p>
+                            <p>2. ⚡️ While he is smashed flat on the floor, **run up and touch him** to electrify and hurt him!</p>
+                            <p>3. 💥 Repeat this 5 times to win!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js?v=5.0"></script>
+</body>
+</html>

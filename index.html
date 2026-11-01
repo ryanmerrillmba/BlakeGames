@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-game="landing">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,18 +9,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
+    <script defer src="telemetry.js"></script>
   </head>
   <body>
     <main>
       <nav aria-label="Primary navigation">
         <a class="brand" href="./" aria-label="Blake Games home"><span class="brand-mark">B</span> Blake Games</a>
-        <span class="nav-status"><i></i> New games coming soon</span>
+        <span class="nav-status"><i></i> Last updated October 31, 2026</span>
       </nav>
 
       <section class="hero" aria-labelledby="page-title">
         <p class="eyebrow">LEVEL SELECT</p>
-        <h1 id="page-title">Pick a game.<br /><span>Make it legendary.</span></h1>
-        <p class="intro">Welcome to Blake's arcade. Each game has its own world, characters, and high-score-worthy mayhem.</p>
+        <h1 id="page-title">Pick a game and start playing.</h1>
+        <p class="intro">Welcome to Blake's Arcade. Each game has its own world, characters, and challenges.</p>
       </section>
 
       <section aria-labelledby="games-title">
@@ -32,7 +33,7 @@
           <article class="game-card flop-dope">
             <div class="card-art flop-art" aria-hidden="true">
               <span class="flop-sun">✦</span><span class="flop-cloud">☁</span>
-              <img src="flop-and-dope/assets/characters/giant-dad.png" alt="Giant Dad from Flop &amp; Dope" />
+              <span class="flop-hero" role="img" aria-label="Giant Dad from Flop and Dope">🦸</span>
               <span class="flop-star">✦</span>
             </div>
             <div class="card-body">
@@ -94,10 +95,7 @@
             </div>
           </article>
 
-          <article class="game-card coming-soon" aria-label="More games coming soon">
-            <div class="plus">+</div>
-            <p>Next game<br />loading…</p>
-          </article>
+
         </div>
       </section>
     </main>

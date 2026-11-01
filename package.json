@@ -1,0 +1,26 @@
+{
+  "name": "blakegames",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:browser": "playwright test",
+    "lint": "node --check telemetry.js && node --check flop-and-dope/game.js && node --check 10-military-mills/audio.js && node --check 10-military-mills/characters.js && node --check 10-military-mills/game.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ryanmerrillmba/BlakeGames.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ryanmerrillmba/BlakeGames/issues"
+  },
+  "homepage": "https://github.com/ryanmerrillmba/BlakeGames#readme",
+  "private": true,
+  "devDependencies": {
+    "@playwright/test": "^1.55.0"
+  }
+}
