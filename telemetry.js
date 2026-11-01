@@ -52,8 +52,12 @@
       () => {
         // This event is deliberately sent only after gtag.js has loaded. It gives
         // a one-time, unambiguous check that the production tag can send data.
-        if (verificationRun) emit('analytics_verification', { source: 'tag_loaded' });
-      }
+        if (verificationRun) {
+          emit('analytics_verification', { source: 'tag_loaded' });
+          reportAnalyticsVerification('tag_loaded');
+        }
+      },
+      () => reportAnalyticsVerification('tag_failed_to_load')
     );
     if (pageName !== 'landing') emit('game_start', { entry: 'page_load' });
   }
@@ -81,6 +85,25 @@
         window.Sentry.captureMessage('BlakeGames telemetry verification', { level: 'warning', tags: { verification: 'true', game: pageName } });
       }
     });
+  }
+
+  function reportAnalyticsVerification(status) {
+    if (!new URLSearchParams(location.search).has('analytics-test')) return;
+    loadTelemetry();
+    let attempts = 0;
+    const report = () => {
+      if (sentryReady && window.Sentry) {
+        window.Sentry.captureMessage(`Google Analytics verification: ${status}`, {
+          level: 'warning',
+          tags: { verification: 'true', analytics_status: status, game: pageName }
+        });
+      } else if (attempts++ < 100) {
+        window.setTimeout(report, 50);
+      } else {
+        console.warn('Unable to report Google Analytics verification to Sentry');
+      }
+    };
+    report();
   }
 
   ['pointerdown', 'keydown', 'touchstart'].forEach((event) => window.addEventListener(event, loadTelemetry, { once: true, passive: event !== 'keydown' }));
