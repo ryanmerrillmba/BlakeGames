@@ -27,12 +27,44 @@ const localInteractions = {
   },
 };
 
+const knownTelemetryHosts = new Set([
+  'www.googletagmanager.com',
+  'www.google-analytics.com',
+  'region1.google-analytics.com',
+  'browser.sentry-cdn.com',
+]);
+
+function isKnownThirdPartyTelemetry(url) {
+  try {
+    const { hostname } = new URL(url);
+    return knownTelemetryHosts.has(hostname) || hostname.endsWith('.ingest.us.sentry.io');
+  } catch {
+    return false;
+  }
+}
+
+function isResourceLoadError(message) {
+  return message.text().startsWith('Failed to load resource:');
+}
+
 function captureBrowserErrors(page) {
-  const errors = [];
-  page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
+  const errors = new Set();
+  page.on('pageerror', (error) => errors.add(`pageerror: ${error.message}`));
   page.on('console', (message) => {
-    if (message.type() === 'error') {
-      errors.push(`console.error: ${message.text()}`);
+    if (message.type() !== 'error') return;
+
+    const location = message.location();
+    if (isResourceLoadError(message) && isKnownThirdPartyTelemetry(location.url)) return;
+    errors.add(`console.error: ${message.text()} (${location.url || 'unknown source'})`);
+  });
+  page.on('response', (response) => {
+    if (!response.ok() && !isKnownThirdPartyTelemetry(response.url())) {
+      errors.add(`resource returned HTTP ${response.status()}: ${response.url()}`);
+    }
+  });
+  page.on('requestfailed', (request) => {
+    if (!isKnownThirdPartyTelemetry(request.url())) {
+      errors.add(`resource request failed: ${request.url()} (${request.failure()?.errorText || 'unknown error'})`);
     }
   });
   return errors;
@@ -57,7 +89,7 @@ test('every homepage Play link is publicly reachable and each local game starts 
   expect(cards, 'every homepage game card needs one Play link').toHaveLength(await page.locator('.game-card').count());
   expect(cards).not.toHaveLength(0);
   expect(cards.every((card) => card.title && card.href), 'every Play link needs a game title and destination').toBe(true);
-  expect(homepageErrors, 'homepage emitted browser errors').toEqual([]);
+  expect([...homepageErrors], 'homepage emitted browser errors').toEqual([]);
 
   for (const card of cards) {
     const destination = new URL(card.href);
@@ -99,7 +131,7 @@ test('every homepage Play link is publicly reachable and each local game starts 
       failures.push(`${card.title} did not start/respond to its minimal interaction: ${error.message}`);
     }
     await page.waitForTimeout(300);
-    failures.push(...browserErrors.map((error) => `${card.title} emitted ${error}`));
+    failures.push(...[...browserErrors].map((error) => `${card.title} emitted ${error}`));
   }
 
   expect(failures).toEqual([]);
