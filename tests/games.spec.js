@@ -79,7 +79,7 @@ test('Flop & Dope shows the Nippin dungeon guide without retired characters', as
   await page.goto('/flop-and-dope/');
 
   await expect(page.locator('.character-card')).toHaveCount(5);
-  await expect(page.locator('.character-card h3')).not.toContainText('Electro');
+  await expect(page.locator('.character-card h3').filter({ hasText: 'Electro' })).toHaveCount(0);
 
   await page.locator('#tab-guide').click();
   await expect(page.locator('.guide-card h3')).toHaveText([
