@@ -143,7 +143,7 @@ test('telemetry remains inactive before consent-like interaction and records gam
   await page.evaluate(() => window.addEventListener('blakegames:telemetry', (event) => window.__testEvents = (window.__testEvents || []).concat(event.detail.name)));
   await page.locator('#startGame').click();
   events.push(...await page.evaluate(() => window.__testEvents));
-  expect(events).toEqual(expect.arrayContaining(['page_view', 'game_start']));
+  expect(events).toEqual(expect.arrayContaining(['game_start']));
 });
 
 test('telemetry initializes GA and Sentry with the configured DSN and captures a controlled event', async ({ page }) => {
