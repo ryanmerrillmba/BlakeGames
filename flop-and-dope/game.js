@@ -1166,7 +1166,7 @@ class Enemy {
                 drawY = this.y + this.h * 0.35;
             }
 
-            if (img && img.complete) {
+            if (img && img.complete && img.naturalWidth > 0) {
                 if (this.vx > 0) {
                     ctx.save();
                     ctx.translate(this.x + this.w, drawY);
@@ -1212,7 +1212,7 @@ class Enemy {
             ctx.lineTo(cx + 2, cy + 2);
             ctx.stroke();
         } else {
-            if (img && img.complete) {
+            if (img && img.complete && img.naturalWidth > 0) {
                 if (this.vx > 0) {
                     ctx.save();
                     ctx.translate(this.x + this.w, this.y);
@@ -1552,7 +1552,7 @@ class Clone {
         ctx.globalAlpha = 0.55; // translucent clone look
         
         const img = heroImages[this.type];
-        if (img && img.complete) {
+        if (img && img.complete && img.naturalWidth > 0) {
             ctx.drawImage(img, this.x, this.y, this.width, this.height);
         } else {
             const seed = Math.floor(this.x * 2 + this.y * 3);
@@ -2334,7 +2334,7 @@ class Boss {
                 drawY = levelHeight - 40 - drawHeight;
             }
 
-            if (img && img.complete) {
+            if (img && img.complete && img.naturalWidth > 0) {
                 ctx.drawImage(img, this.x, drawY, this.w, drawHeight);
             } else {
                 // Fallback block
@@ -2376,7 +2376,7 @@ class Boss {
             ctx.rotate(angle);
             ctx.translate(-cx, -cy);
 
-            if (img && img.complete) {
+            if (img && img.complete && img.naturalWidth > 0) {
                 if (this.vx > 0) {
                     ctx.save();
                     ctx.translate(this.x + this.w, drawY);
@@ -2428,7 +2428,7 @@ class Boss {
             ctx.save();
             ctx.translate(this.x + this.w/2, this.y + this.h/2);
             ctx.rotate(angle);
-            if (img && img.complete) {
+            if (img && img.complete && img.naturalWidth > 0) {
                 if (this.vx > 0) {
                     ctx.save();
                     ctx.scale(-1, 1);
@@ -2455,7 +2455,7 @@ class Boss {
             ctx.translate(this.x + this.w/2, this.y + this.h/2);
             ctx.rotate(angle);
             
-            if (img && img.complete) {
+            if (img && img.complete && img.naturalWidth > 0) {
                 ctx.drawImage(img, -this.w/2, -this.h/2, this.w, this.h);
             } else {
                 const seed = Math.floor(this.x * 2 + this.y * 3);
@@ -2489,7 +2489,7 @@ class Boss {
             }
 
             ctx.save();
-            if (img && img.complete) {
+            if (img && img.complete && img.naturalWidth > 0) {
                 ctx.drawImage(img, this.x, drawY, this.w, drawHeight);
             } else {
                 const seed = Math.floor(this.x * 2 + this.y * 3);
@@ -3836,7 +3836,7 @@ function drawCelebration() {
     // Draw Heroes
     celebrationHeroes.forEach(hero => {
         const img = heroImages[hero.type];
-        if (img && img.complete) {
+        if (img && img.complete && img.naturalWidth > 0) {
             ctx.drawImage(img, hero.x, hero.y, hero.w, hero.h);
         } else {
             drawSketchyRect(hero.x, hero.y, hero.w, hero.h, hero.color, '#2b2b2b', 2.0, 9);
