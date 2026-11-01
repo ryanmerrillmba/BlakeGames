@@ -89,7 +89,11 @@ test('Nut Throw Catch includes the locked Lion boss progression and appearance c
   await blockThirdParties(page);
   await page.goto('/nut-throw-catch/');
   await expect(page.locator('#lion')).toBeAttached();
+  await expect(page.locator('#lion .lion-arm')).toHaveCount(2);
+  await expect(page.locator('#lion .lion-leg')).toHaveCount(2);
+  await expect(page.locator('#lion .lion-tail')).toBeAttached();
   await expect(page.locator('#lionChoice')).toBeAttached();
+  await expect(page.locator('[data-lion-look]')).toHaveCount(3);
   await page.locator('#levelsBtn').click();
   await expect(page.getByText('Defeat the Bird to unlock the Lion.')).toBeVisible();
 });
