@@ -13,6 +13,7 @@ test('Flop and Dope renders complete artwork at a readable size', async ({ page 
       renderedHeight: box.height,
       complete: image.complete,
       lowerVisiblePixels: (() => {
+        if (!image.naturalWidth || !image.naturalHeight) return 0;
         const canvas = document.createElement('canvas');
         canvas.width = image.naturalWidth;
         canvas.height = image.naturalHeight;
