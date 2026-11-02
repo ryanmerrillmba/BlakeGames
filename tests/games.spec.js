@@ -86,7 +86,8 @@ test('Flop & Dope shows the Nippin dungeon guide without retired characters', as
     'Nippin King (First Boss)',
     'Nippins',
     'Poster (Second Boss)',
-    'Spark Ball',
+    'Shine the Shine',
+    'Secret Boss',
     'Galler Lord (Boss)',
     'Mada (Boss)',
     'Blood Shark',
@@ -116,6 +117,27 @@ test('Flop & Dope reaches the reordered Nippin and boss levels without browser e
     await page.locator('#hud-level-select').selectOption(level);
     await page.waitForTimeout(120);
   }
+  expect(failures).toEqual([]);
+});
+
+test('Flop & Dope replaces Spark Ball with Shine the Shine and exposes the optional Secret Boss', async ({ page }) => {
+  const failures = [];
+  page.on('pageerror', (error) => failures.push(error.message));
+  await blockThirdParties(page);
+  await page.goto('/flop-and-dope/');
+  await expect(page.locator('.level-select-btn[data-level="28"]')).toHaveText('Level 28: Shine the Shine ✨');
+  await page.locator('#tab-guide').click();
+  await expect(page.getByText(/fully metal ground robot with dazzling lights/)).toBeVisible();
+  await expect(page.getByText(/visible giant iron robot with a giant iron axe/)).toBeVisible();
+  await expect(page.locator('.guide-secret-placeholder')).toBeVisible();
+  await page.locator('#tab-play').click();
+  await expect(page.getByRole('button', { name: /Secret Boss/ })).toBeVisible();
+  await page.locator('.character-card').first().click();
+  await page.getByRole('button', { name: /Secret Boss/ }).click();
+  await page.locator('#start-game-btn').click();
+  await expect(page.locator('#gameplay-screen')).toHaveClass(/active/);
+  await expect(page.locator('#hud-level-select')).toHaveValue('99');
+  await page.waitForTimeout(500);
   expect(failures).toEqual([]);
 });
 

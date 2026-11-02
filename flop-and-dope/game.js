@@ -7,6 +7,7 @@ const ctx = canvas.getContext('2d');
 const charSelectScreen = document.getElementById('character-select-screen');
 const gameplayScreen = document.getElementById('gameplay-screen');
 const startGameBtn = document.getElementById('start-game-btn');
+const secretBossBtn = document.getElementById('secret-boss-btn');
 const backToMenuBtn = document.getElementById('back-to-menu-btn');
 const restartBtn = document.getElementById('restart-btn');
 const gameOverOverlay = document.getElementById('game-over-overlay');
@@ -961,6 +962,8 @@ class Enemy {
         this.animTimer = Math.random() * 100;
         
         this.freezeTimer = 0; // Frozen state timer
+        this.hatchTimer = type === 'shine-egg' ? 42 : 0;
+        this.deployTimer = type === 'shine-kid' ? 55 + Math.random() * 45 : 0;
         
         this.applyStats();
     }
@@ -986,6 +989,14 @@ class Enemy {
             this.w = 24;
             this.h = 24;
             this.vx = isEasy ? -1.0 : -1.8;
+        } else if (this.type === 'shine-egg') {
+            this.w = 26;
+            this.h = 24;
+            this.vx = 0;
+        } else if (this.type === 'shine-kid') {
+            this.w = 42;
+            this.h = 42;
+            this.vx = isEasy ? -0.9 : -1.4;
         }
     }
 
@@ -1004,6 +1015,27 @@ class Enemy {
                 collectibles.push(new Collectible(this.x, this.y + 10, 'heart'));
                 for (let i = 0; i < 5; i++) {
                     particles.push(new Particle(this.x, this.y + 10, (Math.random()-0.5)*3, Math.random()*2, '#4dabf7', 2+Math.random()*2, 20, 'dust'));
+                }
+            }
+            return;
+        }
+
+        if (this.type === 'shine-egg') {
+            this.vy += GRAVITY * 0.7;
+            this.y += this.vy;
+            if (this.y + this.h >= levelHeight - 40) {
+                this.y = levelHeight - 40 - this.h;
+                this.vy = 0;
+            }
+            this.hatchTimer--;
+            if (this.hatchTimer <= 0) {
+                this.type = 'shine-kid';
+                this.applyStats();
+                this.y = levelHeight - 40 - this.h;
+                this.vy = -3.5;
+                this.deployTimer = 35 + Math.random() * 25;
+                for (let i = 0; i < 8; i++) {
+                    particles.push(new Particle(this.x + this.w / 2, this.y + this.h / 2, (Math.random() - 0.5) * 4, -Math.random() * 3, '#ffd43b', 5 + Math.random() * 4, 24, 'star'));
                 }
             }
             return;
@@ -1070,6 +1102,15 @@ class Enemy {
                     // Walk in player direction
                     this.vx = (player.x < this.x) ? -1.5 : 1.5;
                 }
+            }
+        }
+
+        if (this.type === 'shine-kid') {
+            this.deployTimer--;
+            if (this.deployTimer <= 0 && enemies.filter(enemy => enemy.type === 'shine-egg').length < 24) {
+                enemies.push(new Enemy(this.x - 10, this.y - 28, 'shine-egg'));
+                enemies.push(new Enemy(this.x + 10, this.y - 28, 'shine-egg'));
+                this.deployTimer = 55 + Math.random() * 45;
             }
         }
     }
@@ -1154,6 +1195,9 @@ class Enemy {
             }
             scaleX = 1 + getWiggle(1) * 0.12;
             scaleY = 1 + getWiggle(2) * 0.12;
+        } else if (this.type === 'shine-kid') {
+            scaleY = 1 + Math.sin(this.animTimer * 1.8) * 0.08;
+            scaleX = 1 - Math.sin(this.animTimer * 1.8) * 0.06;
         }
 
         ctx.translate(cx, cy);
@@ -1201,6 +1245,23 @@ class Enemy {
             drawSketchyCircle(cx - 5, cy - 3 + pulse, 1, '#2b2b2b', '#2b2b2b', seed + 3);
             drawSketchyCircle(cx + 5, cy - 3 + pulse, 1, '#2b2b2b', '#2b2b2b', seed + 4);
             drawSketchyLine(cx - 4, cy + 6 + pulse, cx + 4, cy + 6 + pulse, '#3b1f66', 1.5, seed + 5);
+        } else if (this.type === 'shine-egg') {
+            const seed = Math.floor(this.x * 9 + this.hatchTimer);
+            drawSketchyCircle(cx, cy, 13, '#fff3bf', '#ff922b', seed);
+            drawSketchyLine(cx - 5, cy - 2, cx + 5, cy - 2, '#ffd43b', 3, seed + 1);
+            drawSketchyLine(cx - 4, cy + 5, cx + 4, cy + 5, '#74c0fc', 2, seed + 2);
+        } else if (this.type === 'shine-kid') {
+            const seed = Math.floor(this.x * 7 + this.y * 5);
+            drawSketchyRect(this.x + 7, this.y + 14, this.w - 14, this.h - 11, '#74c0fc', '#2b2b2b', 2.5, seed);
+            drawSketchyCircle(cx, this.y + 11, 13, '#fff3bf', '#2b2b2b', seed + 1);
+            drawSketchyCircle(cx - 4, this.y + 9, 2, '#ffd43b', '#2b2b2b', seed + 2);
+            drawSketchyCircle(cx + 4, this.y + 9, 2, '#ffd43b', '#2b2b2b', seed + 3);
+            drawSketchyLine(cx - 8, this.y + this.h - 1, cx - 13, this.y + this.h + 8, '#5f3dc4', 4, seed + 4);
+            drawSketchyLine(cx + 8, this.y + this.h - 1, cx + 13, this.y + this.h + 8, '#5f3dc4', 4, seed + 5);
+            ctx.fillStyle = '#ffd43b';
+            ctx.font = '13px Gochi Hand';
+            ctx.fillText('✦', this.x - 5, this.y - 4);
+            ctx.fillText('✧', this.x + this.w - 4, this.y + 8);
         } else if (this.type === 'spark-bobby') {
             // Draw a wiggling/crackling yellow Spark Ball
             const pulse = Math.sin(Date.now() / 80) * 3;
@@ -1835,6 +1896,21 @@ class Boss {
             this.actionState = 'bounce';
             this.timer = 65;
             this.vx = 3.6;
+        } else if (this.type === 'shine-the-shine') {
+            this.w = 190;
+            this.h = 170;
+            this.hearts = 8;
+            this.actionState = 'patrol';
+            this.timer = 90;
+            this.vx = 2.2;
+        } else if (this.type === 'secret-boss') {
+            this.w = 220;
+            this.h = 190;
+            this.hearts = 14;
+            this.actionState = 'patrol';
+            this.timer = 55;
+            this.vx = 2.0;
+            this.eggTimer = 0;
         } else if (this.type === 'galler-lord') {
             this.w = 170;
             this.h = 150;
@@ -2014,6 +2090,58 @@ class Boss {
                 projectiles.push(new Projectile(this.x + this.w / 2, this.y + 42, dir, -3, 'enemy', 'spark'));
                 projectiles.push(new Projectile(this.x + this.w / 2, this.y + 52, dir * 0.75, -5, 'enemy', 'spark'));
                 projectiles.push(new Projectile(this.x + this.w / 2, this.y + 58, dir * 1.15, -1, 'enemy', 'spark'));
+            }
+        }
+        else if (this.type === 'shine-the-shine') {
+            // Shine is the regular level-28 metal robot: grounded, shiny, and controlled.
+            this.wobbleTimer += 0.2;
+            this.x += this.vx;
+            if (this.x < 90 || this.x > levelWidth - 90 - this.w) {
+                this.vx = -this.vx;
+            }
+            this.y = levelHeight - 40 - this.h;
+            this.timer--;
+            if (this.timer <= 0) {
+                this.timer = 78 + Math.random() * 35;
+                const dir = player.x < this.x ? -5 : 5;
+                projectiles.push(new Projectile(this.x + this.w / 2 - 18, this.y + 42, dir, -2, 'enemy', 'spark'));
+                projectiles.push(new Projectile(this.x + this.w / 2 + 18, this.y + 42, dir, -1, 'enemy', 'spark'));
+                for (let i = 0; i < 6; i++) {
+                    particles.push(new Particle(this.x + this.w / 2, this.y + 40, (Math.random() - 0.5) * 5, -Math.random() * 4, '#ffd43b', 4 + Math.random() * 4, 22, 'star'));
+                }
+                triggerScreenShake(4);
+            }
+        }
+        else if (this.type === 'secret-boss') {
+            // The optional corner boss is the one that stomps, lays eggs, and multiplies.
+            this.wobbleTimer += 0.2;
+            this.x += this.vx;
+            if (this.x < 80 || this.x > levelWidth - 80 - this.w) {
+                this.vx = -this.vx;
+            }
+            this.y = levelHeight - 40 - this.h;
+            this.timer--;
+            if (this.actionState === 'stomp') {
+                if (this.timer === 20 && player.grounded && !player.isSneaking && Math.abs((player.x + player.width / 2) - (this.x + this.w / 2)) < 250) {
+                    player.takeDamage(1);
+                }
+                if (this.timer <= 0) {
+                    this.actionState = 'patrol';
+                    this.timer = 42 + Math.random() * 24;
+                }
+            } else if (this.timer <= 0) {
+                this.actionState = 'stomp';
+                this.timer = 38;
+                for (let i = 0; i < 2; i++) {
+                    const egg = new Enemy(this.x + (i === 0 ? 26 : this.w - 50), levelHeight - 80, 'shine-egg');
+                    egg.vy = -5 - i;
+                    egg.vx = i === 0 ? -1.5 : 1.5;
+                    enemies.push(egg);
+                }
+                for (let i = 0; i < 18; i++) {
+                    particles.push(new Particle(this.x + this.w / 2, levelHeight - 45, (Math.random() - 0.5) * 9, -Math.random() * 5, '#ffd43b', 5 + Math.random() * 7, 28, 'star'));
+                }
+                triggerScreenShake(16);
             }
         }
         else if (this.type === 'galler-lord') {
@@ -2584,6 +2712,77 @@ class Boss {
             ctx.textAlign = 'center';
             ctx.fillText('SPARK BALL', cx, this.y - 18);
         }
+        else if (this.type === 'shine-the-shine') {
+            const cx = this.x + this.w / 2;
+            const bodyY = this.y + 70;
+            const seed = Math.floor(this.x * 2 + this.timer);
+
+            // Shine is a grounded metal robot with bright eyes and controlled sparks.
+            drawSketchyLine(cx - 58, bodyY + 70, cx - 70, bodyY + 98, '#868e96', 17, seed);
+            drawSketchyLine(cx + 58, bodyY + 70, cx + 70, bodyY + 98, '#868e96', 17, seed + 1);
+            drawSketchyRect(cx - 62, bodyY, 124, 84, '#adb5bd', '#2b2b2b', 5, seed + 2);
+            drawSketchyLine(cx - 45, bodyY + 16, cx + 45, bodyY + 16, '#f8f9fa', 7, seed + 3);
+            drawSketchyCircle(cx, bodyY + 48, 16, '#74c0fc', '#fff3bf', seed + 4);
+            drawSketchyCircle(cx, this.y + 42, 44, '#adb5bd', '#2b2b2b', seed + 5);
+            drawSketchyLine(cx - 24, this.y + 43, cx + 24, this.y + 43, '#868e96', 8, seed + 6);
+            drawSketchyCircle(cx - 16, this.y + 39, 8, '#fff3bf', '#2b2b2b', seed + 7);
+            drawSketchyCircle(cx + 16, this.y + 39, 8, '#fff3bf', '#2b2b2b', seed + 8);
+            drawSketchyCircle(cx - 16, this.y + 39, 3, '#ffd43b', '#74c0fc', seed + 9);
+            drawSketchyCircle(cx + 16, this.y + 39, 3, '#ffd43b', '#74c0fc', seed + 10);
+            drawSketchyLine(cx - 15, this.y + 62, cx + 15, this.y + 62, '#2b2b2b', 3, seed + 11);
+            ctx.fillStyle = '#ffd43b';
+            ctx.font = '25px Gochi Hand';
+            ctx.textAlign = 'center';
+            ctx.fillText('SHINE THE SHINE', cx, this.y - 18);
+            for (let i = 0; i < 5; i++) {
+                const sparkX = this.x + 16 + ((i * 43) % (this.w - 32));
+                const sparkY = this.y + 12 + Math.sin(this.wobbleTimer * 2 + i) * 7;
+                ctx.fillText(i % 2 ? '✦' : '✧', sparkX, sparkY);
+            }
+        }
+        else if (this.type === 'secret-boss') {
+            const stomp = this.actionState === 'stomp';
+            const shake = stomp ? Math.sin(this.timer * 0.8) * 5 : Math.sin(this.wobbleTimer) * 2;
+            const cx = this.x + this.w / 2 + shake;
+            const bodyY = this.y + 78;
+            const seed = Math.floor(this.x * 2 + this.timer);
+
+            // Secret Boss is a visible iron giant with a giant iron axe.
+            drawSketchyLine(cx - 72, bodyY + 75, cx - 88, bodyY + 110, '#495057', 22, seed);
+            drawSketchyLine(cx + 72, bodyY + 75, cx + 88, bodyY + 110, '#495057', 22, seed + 1);
+            drawSketchyRect(cx - 74, bodyY, 148, 92, '#868e96', '#212529', 6, seed + 2);
+            drawSketchyLine(cx - 55, bodyY + 18, cx + 52, bodyY + 18, '#ced4da', 9, seed + 3);
+            drawSketchyCircle(cx, bodyY + 54, 20, '#343a40', '#ffd43b', seed + 4);
+            drawSketchyCircle(cx, this.y + 46, 52, '#adb5bd', '#212529', seed + 5);
+            drawSketchyLine(cx - 30, this.y + 48, cx + 30, this.y + 48, '#6c757d', 10, seed + 6);
+            drawSketchyCircle(cx - 19, this.y + 43, 9, '#fff3bf', '#212529', seed + 7);
+            drawSketchyCircle(cx + 19, this.y + 43, 9, '#fff3bf', '#212529', seed + 8);
+            drawSketchyCircle(cx - 19, this.y + 43, 4, '#ffd43b', '#74c0fc', seed + 9);
+            drawSketchyCircle(cx + 19, this.y + 43, 4, '#ffd43b', '#74c0fc', seed + 10);
+
+            ctx.save();
+            ctx.translate(cx + 76, bodyY + 28);
+            ctx.rotate(stomp ? -0.95 : -0.5);
+            drawSketchyLine(0, 0, 42, 68, '#343a40', 12, seed + 11);
+            ctx.fillStyle = '#ced4da';
+            ctx.strokeStyle = '#212529';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(20, 54); ctx.lineTo(78, 28); ctx.lineTo(100, 42);
+            ctx.lineTo(73, 70); ctx.lineTo(99, 96); ctx.lineTo(68, 101);
+            ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.restore();
+
+            ctx.fillStyle = '#ffd43b';
+            ctx.font = '25px Gochi Hand';
+            ctx.textAlign = 'center';
+            ctx.fillText('SECRET BOSS', cx, this.y - 18);
+            for (let i = 0; i < 6; i++) {
+                const sparkX = this.x + 14 + ((i * 53) % (this.w - 28));
+                const sparkY = this.y + 12 + ((i * 29) % 75) + Math.sin(this.wobbleTimer * 2 + i) * 5;
+                ctx.fillText(i % 2 ? '✦' : '✧', sparkX, sparkY);
+            }
+        }
         else if (this.type === 'galler-lord') {
             const cx = this.x + this.w / 2;
             const cy = this.y + this.h / 2;
@@ -2910,7 +3109,7 @@ function getLevelName(levelNum) {
         19: 'Level 19', 20: 'Level 20', 21: 'Level 21',
         22: 'Level 22', 23: 'Level 23', 24: 'Level 24',
         25: 'Level 25', 26: 'Level 26', 27: 'Level 27',
-        28: 'Level 28 (Spark Ball)', 29: 'Level 29', 30: 'Level 30', 31: 'Level 31 (Galler Lord)',
+        28: 'Level 28 (Shine the Shine)', 29: 'Level 29', 30: 'Level 30', 31: 'Level 31 (Galler Lord)',
         32: 'Level 32', 33: 'Level 33', 34: 'Level 34 (Final Boss)'
     };
     return names[levelNum] || 'Level ' + levelNum;
@@ -2949,9 +3148,9 @@ function progressToNextLevel(nextLevelNum) {
         subtitle = "Prepare for two more levels before Mada!";
     } else if (currentLevel === 18) {
         title = "MADA DEFEATED! 🟣";
-        subtitle = "Prepare for the blazing Spark Ball boss at level 28!";
+        subtitle = "Prepare for the dazzling Shine the Shine boss at level 28!";
     } else if (currentLevel === 28) {
-        title = "SPARK BALL DEFEATED! ⚡";
+        title = "SHINE THE SHINE DEFEATED! ✨";
         subtitle = "Prepare for two more levels before Galler Lord!";
     } else if (currentLevel === 31) {
         title = "GALLER LORD DEFEATED! 🌌";
@@ -3001,7 +3200,7 @@ function loadLevel(levelNum) {
     }
 
     // Floor along whole level width (except where we manually override)
-    if (![4, 5, 6, 7, 8, 9, 10, 12, 15, 18, 28, 31, 34].includes(levelNum)) {
+    if (![4, 5, 6, 7, 8, 9, 10, 12, 15, 18, 28, 31, 34, 99].includes(levelNum)) {
         platforms.push(new Platform(0, levelHeight - 40, 600, 40, 'grass'));
     }
     
@@ -3359,11 +3558,11 @@ function loadLevel(levelNum) {
         bossIntroTimer = 300;
     }
     else if (levelNum === 28) {
-        levelWidth = 1100; // Spark Ball boss arena
+        levelWidth = 1100; // Shine the Shine boss arena
         platforms.push(new Platform(0, levelHeight - 40, 1100, 40, 'brick'));
         platforms.push(new Platform(250, levelHeight - 160, 140, 20, 'brick'));
         platforms.push(new Platform(710, levelHeight - 220, 140, 20, 'brick'));
-        boss = new Boss(500, 120, 'spark-bobby-boss');
+        boss = new Boss(500, levelHeight - 210, 'shine-the-shine');
         bossIntroTimer = 300;
         collectibles.push(new Collectible(250, levelHeight - 200, 'heart'));
         collectibles.push(new Collectible(850, levelHeight - 260, 'heart'));
@@ -3387,6 +3586,18 @@ function loadLevel(levelNum) {
         bossIntroTimer = 300;
         collectibles.push(new Collectible(300, levelHeight - 180, 'heart'));
         collectibles.push(new Collectible(900, levelHeight - 180, 'heart'));
+    }
+    else if (levelNum === 99) {
+        levelWidth = 1250; // Optional Secret Boss arena
+        platforms.push(new Platform(0, levelHeight - 40, 1250, 40, 'brick'));
+        platforms.push(new Platform(220, levelHeight - 165, 170, 20, 'brick'));
+        platforms.push(new Platform(860, levelHeight - 165, 170, 20, 'brick'));
+        boss = new Boss(520, levelHeight - 230, 'secret-boss');
+        boss.hearts = 14;
+        boss.timer = 55;
+        bossIntroTimer = 300;
+        collectibles.push(new Collectible(270, levelHeight - 215, 'heart'));
+        collectibles.push(new Collectible(930, levelHeight - 215, 'heart'));
     }
 
     // Spawn player at start
@@ -3682,6 +3893,10 @@ function checkCollisions() {
                             progressToNextLevel(10);
                         } else if (boss.type === 'spark-bobby-boss') {
                             progressToNextLevel(29);
+                        } else if (boss.type === 'shine-the-shine') {
+                            progressToNextLevel(29);
+                        } else if (boss.type === 'secret-boss') {
+                            winGame('✨ Secret Boss defeated! The multiplying deployment has stopped! ✨');
                         } else if (boss.type === 'galler-lord') {
                             progressToNextLevel(32);
                         } else if (boss.type === 'dragon-emperor') {
@@ -3784,6 +3999,44 @@ function checkCollisions() {
                         triggerScreenShake(10);
                         if (boss.hearts <= 0) {
                             progressToNextLevel(29);
+                        }
+                    }
+                } else {
+                    player.takeDamage(1);
+                }
+            }
+            else if (boss.type === 'shine-the-shine') {
+                // Shine can be stomped while patrolling or during a hammer stomp.
+                if (player.vy > 0 && player.y + player.height - player.vy <= boss.y + 45) {
+                    if (boss.invulnerableFrame <= 0) {
+                        boss.hearts--;
+                        boss.invulnerableFrame = 48;
+                        boss.isElectrified = true;
+                        player.vy = -10;
+                        player.isGroundPounding = false;
+                        triggerScreenShake(14);
+                        for (let i = 0; i < 12; i++) {
+                            particles.push(new Particle(boss.x + boss.w / 2, boss.y + 45, (Math.random() - 0.5) * 8, -2 - Math.random() * 5, '#ffd43b', 8 + Math.random() * 6, 26, 'star'));
+                        }
+                        if (boss.hearts <= 0) {
+                            progressToNextLevel(29);
+                        }
+                    }
+                } else {
+                    player.takeDamage(1);
+                }
+            }
+            else if (boss.type === 'secret-boss') {
+                if (player.vy > 0 && player.y + player.height - player.vy <= boss.y + 55) {
+                    if (boss.invulnerableFrame <= 0) {
+                        boss.hearts--;
+                        boss.invulnerableFrame = 48;
+                        boss.isElectrified = true;
+                        player.vy = -10;
+                        player.isGroundPounding = false;
+                        triggerScreenShake(16);
+                        if (boss.hearts <= 0) {
+                            winGame('✨ Secret Boss defeated! The multiplying deployment has stopped! ✨');
                         }
                     }
                 } else {
@@ -3976,10 +4229,10 @@ function endGame() {
     gameOverOverlay.classList.add('active');
 }
 
-function winGame() {
+function winGame(message = "🌟 Huzzah! You beat the Dungeon Emperor and completed Flope & Dope! You saved the day! 🌟") {
     gameRunning = false;
     window.BlakeTelemetry?.track('game_complete', { level: selectedStartLevel });
-    alert("🌟 Huzzah! You beat the Dungeon Emperor and completed Flope & Dope! You saved the day! 🌟");
+    alert(message);
     backToMenu();
 }
 
@@ -3993,6 +4246,9 @@ function backToMenu() {
     // No static label to reset
     // Deselect cards
     document.querySelectorAll('.character-card').forEach(c => c.classList.remove('selected'));
+    secretBossSelected = false;
+    selectedStartLevel = 3;
+    secretBossBtn?.classList.remove('active');
     startGameBtn.disabled = true;
     startGameBtn.textContent = 'Select a Hero First!';
 }
@@ -4419,7 +4675,7 @@ function gameLoop() {
         drawSketchyRect(barX, barY, barWidth, barHeight, null, '#2b2b2b', 2.5);
 
         // Draw red health hearts
-        const totalHearts = boss.type === 'nippin-king' || boss.type === 'dungeon-king' ? 7 : (boss.type === 'mada' || boss.type === 'blood-shark' || boss.type === 'dragon-emperor' ? 6 : (boss.type === 'spark-bobby-boss' || boss.type === 'galler-lord' || boss.type === 'dungeon-overlord' ? 8 : 5));
+        const totalHearts = boss.type === 'nippin-king' || boss.type === 'dungeon-king' ? 7 : (boss.type === 'mada' || boss.type === 'blood-shark' || boss.type === 'dragon-emperor' ? 6 : (boss.type === 'spark-bobby-boss' || boss.type === 'galler-lord' || boss.type === 'dungeon-overlord' || boss.type === 'shine-the-shine' ? 8 : (boss.type === 'secret-boss' ? boss.hearts : 5)));
         const heartWidth = barWidth / totalHearts;
         for (let i = 0; i < boss.hearts; i++) {
             ctx.fillStyle = '#ff6b6b';
@@ -4431,7 +4687,7 @@ function gameLoop() {
         ctx.fillStyle = '#ff6b6b';
         ctx.font = '22px Gochi Hand';
         ctx.textAlign = 'center';
-        const bossTitle = boss.type === 'nippin-king' ? 'NIPPIN KING' : (boss.type === 'mada' ? 'MADA' : (boss.type === 'blood-shark' ? 'BLOOD SHARK BOSS' : (boss.type === 'dragon-emperor' ? 'DRAGON BOSS' : (boss.type === 'star-empress' ? 'LADYBUG' : (boss.type === 'spark-bobby-boss' ? 'SPARK BALL' : (boss.type === 'galler-lord' ? 'GALLER LORD' : (boss.type === 'dungeon-king' ? 'DUNGEON KING' : (boss.type === 'dungeon-overlord' ? 'DUNGEON EMPEROR' : 'POSTER'))))))));
+        const bossTitle = boss.type === 'nippin-king' ? 'NIPPIN KING' : (boss.type === 'mada' ? 'MADA' : (boss.type === 'blood-shark' ? 'BLOOD SHARK BOSS' : (boss.type === 'dragon-emperor' ? 'DRAGON BOSS' : (boss.type === 'star-empress' ? 'LADYBUG' : (boss.type === 'spark-bobby-boss' ? 'SPARK BALL' : (boss.type === 'shine-the-shine' ? 'SHINE THE SHINE' : (boss.type === 'secret-boss' ? 'SECRET BOSS' : (boss.type === 'galler-lord' ? 'GALLER LORD' : (boss.type === 'dungeon-king' ? 'DUNGEON KING' : (boss.type === 'dungeon-overlord' ? 'DUNGEON EMPEROR' : 'POSTER'))))))))));
         ctx.fillText(bossTitle, canvas.width / 2, barY - 6);
     }
 
@@ -4497,10 +4753,10 @@ function gameLoop() {
             ctx.fillStyle = '#ff922b';
             ctx.fillText('Jump on Mada when he lands, then dodge his sparks!', canvas.width / 2, bannerY + 52);
         } else if (currentLevel === 28) {
-            ctx.fillText('⚡ BOSS BATTLE: SPARK BALL!', canvas.width / 2, bannerY + 28);
+            ctx.fillText('✨ BOSS BATTLE: SHINE THE SHINE!', canvas.width / 2, bannerY + 28);
             ctx.font = '18px Patrick Hand';
             ctx.fillStyle = '#ff922b';
-            ctx.fillText('Jump on the blazing Spark Ball wherever it bounces!', canvas.width / 2, bannerY + 52);
+            ctx.fillText('Stomp the shiny robot and dodge his controlled eye sparks!', canvas.width / 2, bannerY + 52);
         } else if (currentLevel === 31) {
             ctx.fillText('🌌 BOSS BATTLE: GALLER LORD!', canvas.width / 2, bannerY + 28);
             ctx.font = '18px Patrick Hand';
@@ -4511,6 +4767,11 @@ function gameLoop() {
             ctx.font = '18px Patrick Hand';
             ctx.fillStyle = '#ff922b';
             ctx.fillText('Defeat the Dungeon Emperor to save the sketchbook!', canvas.width / 2, bannerY + 52);
+        } else if (currentLevel === 99) {
+            ctx.fillText('✨ SECRET BOSS: MULTIPLYING HAMMER ROBOT!', canvas.width / 2, bannerY + 28);
+            ctx.font = '18px Patrick Hand';
+            ctx.fillStyle = '#ff922b';
+            ctx.fillText('The iron giant lays eggs that hatch fast into multiplying children!', canvas.width / 2, bannerY + 52);
         }
     }
 
@@ -5194,7 +5455,7 @@ function drawBackgroundElements() {
     } else if (currentLevel === 28) {
         ctx.fillStyle = 'rgba(255, 212, 59, 0.8)';
         ctx.font = '24px Gochi Hand';
-        ctx.fillText('SPARK BALL BOSS ARENA ⚡', 360, 50);
+        ctx.fillText('SHINE THE SHINE BOSS ARENA ✨', 330, 50);
     } else if (currentLevel === 31) {
         ctx.fillStyle = 'rgba(81, 207, 246, 0.9)';
         ctx.font = '24px Gochi Hand';
@@ -5209,6 +5470,16 @@ function drawBackgroundElements() {
         ctx.fillStyle = 'rgba(255, 107, 107, 0.8)';
         ctx.font = '24px Gochi Hand';
         ctx.fillText('FINAL BOSS: DUNGEON EMPEROR 👑', 360, 50);
+    } else if (currentLevel === 99) {
+        ctx.fillStyle = 'rgba(255, 212, 59, 0.9)';
+        ctx.font = '24px Gochi Hand';
+        ctx.fillText('SECRET BOSS ARENA: MULTIPLYING HAMMER ROBOT ✨', 250, 50);
+        for (let i = 0; i < 14; i++) {
+            const sparkX = 70 + ((i * 113) % 1100);
+            const sparkY = 74 + ((i * 47) % 220);
+            ctx.fillStyle = i % 2 ? '#ffd43b' : '#74c0fc';
+            ctx.fillText('✦', sparkX, sparkY);
+        }
     }
     ctx.restore();
 }
@@ -5259,6 +5530,8 @@ function getBlockAt(x, y) {
 
 // Event Listeners for Character select
 const cards = document.querySelectorAll('.character-card');
+let selectedStartLevel = 3; // default starting level
+let secretBossSelected = false;
 cards.forEach(card => {
     card.addEventListener('click', () => {
         cards.forEach(c => c.classList.remove('selected'));
@@ -5266,21 +5539,42 @@ cards.forEach(card => {
         
         const selectedHero = card.dataset.hero;
         startGameBtn.disabled = false;
-        startGameBtn.textContent = `Start as ${card.querySelector('h3').textContent}!`;
+        startGameBtn.textContent = secretBossSelected
+            ? `Start Secret Boss as ${card.querySelector('h3').textContent}!`
+            : `Start as ${card.querySelector('h3').textContent}!`;
         startGameBtn.style.backgroundColor = 'var(--crayon-green)';
         startGameBtn.style.color = '#fff';
     });
 });
 
 // Level select selector handler
-let selectedStartLevel = 3; // default starting level
 const levelBtns = document.querySelectorAll('.level-select-btn');
 levelBtns.forEach(btn => {
     btn.addEventListener('click', () => {
         levelBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         selectedStartLevel = parseInt(btn.dataset.level, 10);
+        secretBossSelected = false;
+        secretBossBtn?.classList.remove('active');
+        const selectedHeroCard = document.querySelector('.character-card.selected');
+        if (selectedHeroCard) {
+            startGameBtn.textContent = `Start as ${selectedHeroCard.querySelector('h3').textContent}!`;
+        }
     });
+});
+
+secretBossBtn?.addEventListener('click', () => {
+    secretBossSelected = true;
+    selectedStartLevel = 99;
+    levelBtns.forEach(b => b.classList.remove('active'));
+    secretBossBtn.classList.add('active');
+    const selectedHeroCard = document.querySelector('.character-card.selected');
+    if (selectedHeroCard) {
+        startGameBtn.disabled = false;
+        startGameBtn.textContent = `Start Secret Boss as ${selectedHeroCard.querySelector('h3').textContent}!`;
+        startGameBtn.style.backgroundColor = 'var(--crayon-purple)';
+        startGameBtn.style.color = '#fff';
+    }
 });
 
 // Gameplay HUD Level select listener

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flope & Dope - Sketchbook Adventure</title>
-    <link rel="stylesheet" href="style.css?v=full-art-1">
+    <link rel="stylesheet" href="style.css?v=shine-1">
     <!-- Google Fonts for hand-drawn look -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -124,7 +124,7 @@
                         <button class="level-select-btn" data-level="25">Level 25</button>
                         <button class="level-select-btn" data-level="26">Level 26</button>
                         <button class="level-select-btn" data-level="27">Level 27</button>
-                        <button class="level-select-btn" data-level="28">Level 28: Spark Ball ⚡</button>
+                        <button class="level-select-btn" data-level="28">Level 28: Shine the Shine ✨</button>
                         <button class="level-select-btn" data-level="29">Level 29</button>
                         <button class="level-select-btn" data-level="30">Level 30</button>
                         <button class="level-select-btn" data-level="31">Level 31: Galler Lord 🌌</button>
@@ -133,6 +133,10 @@
                         <button class="level-select-btn" data-level="34">Level 34: Final Boss 👑</button>
                     </div>
                 </div>
+
+                <button id="secret-boss-btn" class="secret-boss-corner" type="button" aria-label="Play the optional Secret Boss">
+                    ✨ Secret Boss
+                </button>
 
                 <div class="action-container">
                     <button id="start-game-btn" class="crayon-button" disabled>Select a Hero First!</button>
@@ -176,18 +180,30 @@
                         <p class="guide-method"><strong>How to Beat:</strong> Move away to avoid getting squashed! Once Poster lands flat, touch him to electrify and damage him.</p>
                     </div>
 
-                    <!-- Enemy: Spark Ball -->
+                    <!-- Boss: Shine the Shine -->
                     <div class="guide-card">
-                        <div class="guide-img-container spark-card-icon">
-                            <div class="guide-spark-placeholder" aria-label="Spark Ball illustration">
-                                <span class="spark-bolt spark-bolt-left">ϟ</span>
-                                <span class="spark-orb"><span class="spark-eye spark-eye-left"></span><span class="spark-eye spark-eye-right"></span><span class="spark-smile"></span></span>
-                                <span class="spark-bolt spark-bolt-right">ϟ</span>
+                        <div class="guide-img-container shine-card-icon">
+                            <div class="guide-shine-placeholder" aria-label="Shine the Shine illustration">
+                                <span class="shine-helmet"></span><span class="shine-body"></span>
+                                <span class="shine-spark shine-spark-one">✦</span><span class="shine-spark shine-spark-two">✧</span>
                             </div>
                         </div>
-                        <h3>Spark Ball</h3>
-                        <p class="guide-desc"><strong>Behavior:</strong> A crackling electric ball that bounces through the later stages.</p>
-                        <p class="guide-method"><strong>How to Beat:</strong> Jump on Spark Ball or dodge its crackling spikes.</p>
+                        <h3>Shine the Shine</h3>
+                        <p class="guide-desc"><strong>Behavior:</strong> A fully metal ground robot with dazzling lights, shiny eyes, and controlled sparks.</p>
+                        <p class="guide-method"><strong>How to Beat:</strong> Jump on Shine the Shine and dodge the bright eye sparks.</p>
+                    </div>
+
+                    <!-- Optional Secret Boss -->
+                    <div class="guide-card animate-wiggle">
+                        <div class="guide-img-container secret-card-icon">
+                            <div class="guide-secret-placeholder" aria-label="Secret Boss illustration">
+                                <span class="secret-helmet"></span><span class="secret-body"></span><span class="secret-axe">⚔</span>
+                                <span class="secret-egg-art">● ●</span><span class="secret-kid-art">✦ ✦ ✦</span>
+                            </div>
+                        </div>
+                        <h3>Secret Boss</h3>
+                        <p class="guide-desc"><strong>Behavior:</strong> A visible giant iron robot with a giant iron axe. He lays eggs that hatch quickly into multiplying children.</p>
+                        <p class="guide-method"><strong>How to Beat:</strong> Enter the optional secret arena, dodge the axe and stomp waves, then clear every child before the next eggs hatch.</p>
                     </div>
 
                     <!-- Boss: Galler Lord -->
@@ -311,13 +327,14 @@
                             <option value="25">Level 25</option>
                             <option value="26">Level 26</option>
                             <option value="27">Level 27</option>
-                            <option value="28">Level 28: Spark Ball ⚡</option>
+                            <option value="28">Level 28: Shine the Shine ✨</option>
                             <option value="29">Level 29</option>
                             <option value="30">Level 30</option>
                             <option value="31">Level 31: Galler Lord 🌌</option>
                             <option value="32">Level 32</option>
                             <option value="33">Level 33</option>
                             <option value="34">Level 34: Final Boss 👑</option>
+                            <option value="99">✨ Secret Boss Arena</option>
                         </select>
                     </div>
                     <button id="back-to-menu-btn" class="crayon-button small-btn">Main Menu</button>
@@ -355,6 +372,6 @@
         </div>
     </div>
 
-    <script src="game.js?v=5.0"></script>
+    <script src="game.js?v=shine-1"></script>
 </body>
 </html>
