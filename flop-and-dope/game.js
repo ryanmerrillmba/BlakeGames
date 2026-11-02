@@ -46,7 +46,7 @@ heroTypes.forEach(type => {
 
 // Preload enemy images
 const enemyImages = {};
-const enemyTypes = ['dragon-wing', 'dungeon-king', 'blood-shark', 'matera', 'star-shell-bug', 'dungeon-emperor'];
+const enemyTypes = ['dragon-wing', 'dungeon-king', 'blood-shark', 'matera', 'nippin-king', 'nippins', 'shine-the-shine', 'galler-lord', 'star-shell-bug', 'dungeon-emperor', 'secret-boss'];
 enemyTypes.forEach(type => {
     const img = new Image();
     img.src = `assets/enemies/${type}.png`;
@@ -1252,13 +1252,14 @@ class Enemy {
             drawSketchyLine(cx - 4, cy + 5, cx + 4, cy + 5, '#74c0fc', 2, seed + 2);
         } else if (this.type === 'shine-kid') {
             const seed = Math.floor(this.x * 7 + this.y * 5);
-            drawSketchyRect(this.x + 7, this.y + 14, this.w - 14, this.h - 11, '#74c0fc', '#2b2b2b', 2.5, seed);
-            drawSketchyCircle(cx, this.y + 11, 13, '#fff3bf', '#2b2b2b', seed + 1);
-            drawSketchyCircle(cx - 4, this.y + 9, 2, '#ffd43b', '#2b2b2b', seed + 2);
-            drawSketchyCircle(cx + 4, this.y + 9, 2, '#ffd43b', '#2b2b2b', seed + 3);
-            drawSketchyLine(cx - 8, this.y + this.h - 1, cx - 13, this.y + this.h + 8, '#5f3dc4', 4, seed + 4);
-            drawSketchyLine(cx + 8, this.y + this.h - 1, cx + 13, this.y + this.h + 8, '#5f3dc4', 4, seed + 5);
-            ctx.fillStyle = '#ffd43b';
+            // Secret Boss children are dark iron hatchlings, deliberately distinct from Shine.
+            drawSketchyRect(this.x + 7, this.y + 14, this.w - 14, this.h - 11, '#343a40', '#111827', 2.5, seed);
+            drawSketchyCircle(cx, this.y + 11, 13, '#495057', '#111827', seed + 1);
+            drawSketchyCircle(cx - 4, this.y + 9, 2, '#ff922b', '#111827', seed + 2);
+            drawSketchyCircle(cx + 4, this.y + 9, 2, '#ff922b', '#111827', seed + 3);
+            drawSketchyLine(cx - 8, this.y + this.h - 1, cx - 13, this.y + this.h + 8, '#212529', 4, seed + 4);
+            drawSketchyLine(cx + 8, this.y + this.h - 1, cx + 13, this.y + this.h + 8, '#212529', 4, seed + 5);
+            ctx.fillStyle = '#ff922b';
             ctx.font = '13px Gochi Hand';
             ctx.fillText('✦', this.x - 5, this.y - 4);
             ctx.fillText('✧', this.x + this.w - 4, this.y + 8);
@@ -2646,32 +2647,17 @@ class Boss {
             }
         }
         else if (this.type === 'nippin-king') {
-            const cx = this.x + this.w / 2;
-            const cy = this.y + this.h / 2;
+            const img = enemyImages['nippin-king'];
             const pulse = Math.sin(this.wobbleTimer) * 3;
-
-            drawSketchyCircle(cx, cy + pulse, 52, '#9b5de5', '#3b1f66', Math.floor(this.x * 3));
-            drawSketchyCircle(cx - 18, cy - 10 + pulse, 8, '#ffffff', '#2b2b2b', 21);
-            drawSketchyCircle(cx + 18, cy - 10 + pulse, 8, '#ffffff', '#2b2b2b', 22);
-            drawSketchyCircle(cx - 18, cy - 10 + pulse, 3, '#2b2b2b', '#2b2b2b', 23);
-            drawSketchyCircle(cx + 18, cy - 10 + pulse, 3, '#2b2b2b', '#2b2b2b', 24);
-            drawSketchyLine(cx - 16, cy + 18 + pulse, cx + 16, cy + 18 + pulse, '#3b1f66', 3, 25);
-
-            // Crooked crown: this is the dungeon king's new, smaller role.
+            if (img && img.complete && img.naturalWidth > 0) {
+                ctx.drawImage(img, this.x, this.y + pulse, this.w, this.h);
+            } else {
+                drawSketchyCircle(this.x + this.w / 2, this.y + this.h / 2 + pulse, 52, '#9b5de5', '#3b1f66', Math.floor(this.x * 3));
+            }
             ctx.fillStyle = '#ffd43b';
-            ctx.strokeStyle = '#2b2b2b';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(cx - 48, cy - 43 + pulse);
-            ctx.lineTo(cx - 35, cy - 72 + pulse);
-            ctx.lineTo(cx - 12, cy - 50 + pulse);
-            ctx.lineTo(cx, cy - 80 + pulse);
-            ctx.lineTo(cx + 14, cy - 50 + pulse);
-            ctx.lineTo(cx + 42, cy - 70 + pulse);
-            ctx.lineTo(cx + 48, cy - 42 + pulse);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
+            ctx.font = '22px Gochi Hand';
+            ctx.textAlign = 'center';
+            ctx.fillText('NIPPIN KING', this.x + this.w / 2, this.y - 12);
         }
         else if (this.type === 'mada') {
             const img = enemyImages['matera'];
@@ -2713,100 +2699,47 @@ class Boss {
             ctx.fillText('SPARK BALL', cx, this.y - 18);
         }
         else if (this.type === 'shine-the-shine') {
-            const cx = this.x + this.w / 2;
-            const bodyY = this.y + 70;
-            const seed = Math.floor(this.x * 2 + this.timer);
-
-            // Shine is a grounded metal robot with bright eyes and controlled sparks.
-            drawSketchyLine(cx - 58, bodyY + 70, cx - 70, bodyY + 98, '#868e96', 17, seed);
-            drawSketchyLine(cx + 58, bodyY + 70, cx + 70, bodyY + 98, '#868e96', 17, seed + 1);
-            drawSketchyRect(cx - 62, bodyY, 124, 84, '#adb5bd', '#2b2b2b', 5, seed + 2);
-            drawSketchyLine(cx - 45, bodyY + 16, cx + 45, bodyY + 16, '#f8f9fa', 7, seed + 3);
-            drawSketchyCircle(cx, bodyY + 48, 16, '#74c0fc', '#fff3bf', seed + 4);
-            drawSketchyCircle(cx, this.y + 42, 44, '#adb5bd', '#2b2b2b', seed + 5);
-            drawSketchyLine(cx - 24, this.y + 43, cx + 24, this.y + 43, '#868e96', 8, seed + 6);
-            drawSketchyCircle(cx - 16, this.y + 39, 8, '#fff3bf', '#2b2b2b', seed + 7);
-            drawSketchyCircle(cx + 16, this.y + 39, 8, '#fff3bf', '#2b2b2b', seed + 8);
-            drawSketchyCircle(cx - 16, this.y + 39, 3, '#ffd43b', '#74c0fc', seed + 9);
-            drawSketchyCircle(cx + 16, this.y + 39, 3, '#ffd43b', '#74c0fc', seed + 10);
-            drawSketchyLine(cx - 15, this.y + 62, cx + 15, this.y + 62, '#2b2b2b', 3, seed + 11);
-            ctx.fillStyle = '#ffd43b';
-            ctx.font = '25px Gochi Hand';
-            ctx.textAlign = 'center';
-            ctx.fillText('SHINE THE SHINE', cx, this.y - 18);
-            for (let i = 0; i < 5; i++) {
-                const sparkX = this.x + 16 + ((i * 43) % (this.w - 32));
-                const sparkY = this.y + 12 + Math.sin(this.wobbleTimer * 2 + i) * 7;
-                ctx.fillText(i % 2 ? '✦' : '✧', sparkX, sparkY);
+            const img = enemyImages['shine-the-shine'];
+            const pulse = Math.sin(this.wobbleTimer) * 2;
+            if (img && img.complete && img.naturalWidth > 0) {
+                ctx.drawImage(img, this.x, this.y + pulse, this.w, this.h);
+            } else {
+                drawSketchyRect(this.x, this.y + 60, this.w, this.h - 60, '#adb5bd', '#2b2b2b', 5, Math.floor(this.x * 2));
             }
+            ctx.fillStyle = '#ffd43b';
+            ctx.font = '22px Gochi Hand';
+            ctx.textAlign = 'center';
+            ctx.fillText('SHINE THE SHINE', this.x + this.w / 2, this.y - 12);
         }
         else if (this.type === 'secret-boss') {
+            const img = enemyImages['secret-boss'];
             const stomp = this.actionState === 'stomp';
             const shake = stomp ? Math.sin(this.timer * 0.8) * 5 : Math.sin(this.wobbleTimer) * 2;
-            const cx = this.x + this.w / 2 + shake;
-            const bodyY = this.y + 78;
-            const seed = Math.floor(this.x * 2 + this.timer);
-
-            // Secret Boss is a visible iron giant with a giant iron axe.
-            drawSketchyLine(cx - 72, bodyY + 75, cx - 88, bodyY + 110, '#495057', 22, seed);
-            drawSketchyLine(cx + 72, bodyY + 75, cx + 88, bodyY + 110, '#495057', 22, seed + 1);
-            drawSketchyRect(cx - 74, bodyY, 148, 92, '#868e96', '#212529', 6, seed + 2);
-            drawSketchyLine(cx - 55, bodyY + 18, cx + 52, bodyY + 18, '#ced4da', 9, seed + 3);
-            drawSketchyCircle(cx, bodyY + 54, 20, '#343a40', '#ffd43b', seed + 4);
-            drawSketchyCircle(cx, this.y + 46, 52, '#adb5bd', '#212529', seed + 5);
-            drawSketchyLine(cx - 30, this.y + 48, cx + 30, this.y + 48, '#6c757d', 10, seed + 6);
-            drawSketchyCircle(cx - 19, this.y + 43, 9, '#fff3bf', '#212529', seed + 7);
-            drawSketchyCircle(cx + 19, this.y + 43, 9, '#fff3bf', '#212529', seed + 8);
-            drawSketchyCircle(cx - 19, this.y + 43, 4, '#ffd43b', '#74c0fc', seed + 9);
-            drawSketchyCircle(cx + 19, this.y + 43, 4, '#ffd43b', '#74c0fc', seed + 10);
-
-            ctx.save();
-            ctx.translate(cx + 76, bodyY + 28);
-            ctx.rotate(stomp ? -0.95 : -0.5);
-            drawSketchyLine(0, 0, 42, 68, '#343a40', 12, seed + 11);
-            ctx.fillStyle = '#ced4da';
-            ctx.strokeStyle = '#212529';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(20, 54); ctx.lineTo(78, 28); ctx.lineTo(100, 42);
-            ctx.lineTo(73, 70); ctx.lineTo(99, 96); ctx.lineTo(68, 101);
-            ctx.closePath(); ctx.fill(); ctx.stroke();
-            ctx.restore();
-
-            ctx.fillStyle = '#ffd43b';
+            const drawY = this.y + shake;
+            if (img && img.complete && img.naturalWidth > 0) {
+                ctx.drawImage(img, this.x, drawY, this.w, this.h);
+            } else {
+                drawSketchyRect(this.x, drawY + 30, this.w, this.h - 30, '#495057', '#212529', 6, Math.floor(this.x * 2));
+            }
+            ctx.fillStyle = '#ff922b';
             ctx.font = '25px Gochi Hand';
             ctx.textAlign = 'center';
-            ctx.fillText('SECRET BOSS', cx, this.y - 18);
-            for (let i = 0; i < 6; i++) {
-                const sparkX = this.x + 14 + ((i * 53) % (this.w - 28));
-                const sparkY = this.y + 12 + ((i * 29) % 75) + Math.sin(this.wobbleTimer * 2 + i) * 5;
+            ctx.fillText('SECRET BOSS', this.x + this.w / 2, this.y - 18);
+            for (let i = 0; i < 5; i++) {
+                const sparkX = this.x + 18 + ((i * 59) % Math.max(1, this.w - 36));
+                const sparkY = this.y + 18 + ((i * 31) % 80) + Math.sin(this.wobbleTimer * 2 + i) * 5;
                 ctx.fillText(i % 2 ? '✦' : '✧', sparkX, sparkY);
             }
         }
         else if (this.type === 'galler-lord') {
+            const img = enemyImages['galler-lord'];
             const cx = this.x + this.w / 2;
-            const cy = this.y + this.h / 2;
             const pulse = Math.sin(this.wobbleTimer) * 4;
-            const seed = Math.floor(this.x * 2);
-            // Galler Lord is a shiny armored mega, not a planet or a flying shooter.
-            drawSketchyLine(cx - 48, cy + 5 + pulse, cx + 48, cy + 5 + pulse, '#74c0fc', 16, seed);
-            drawSketchyRect(cx - 42, cy - 4 + pulse, 84, 72, '#172554', '#2b2b2b', 4, seed + 1);
-            drawSketchyLine(cx - 42, cy + 18 + pulse, cx - 74, cy + 40 + pulse, '#74c0fc', 12, seed + 2);
-            drawSketchyLine(cx + 42, cy + 18 + pulse, cx + 74, cy + 40 + pulse, '#74c0fc', 12, seed + 3);
-            drawSketchyLine(cx - 22, cy + 66 + pulse, cx - 32, cy + 91 + pulse, '#5f3dc4', 14, seed + 4);
-            drawSketchyLine(cx + 22, cy + 66 + pulse, cx + 32, cy + 91 + pulse, '#5f3dc4', 14, seed + 5);
-            drawSketchyCircle(cx, cy - 32 + pulse, 38, '#74c0fc', '#2b2b2b', seed + 6);
-            drawSketchyCircle(cx - 13, cy - 35 + pulse, 7, '#fff3bf', '#2b2b2b', seed + 7);
-            drawSketchyCircle(cx + 13, cy - 35 + pulse, 7, '#fff3bf', '#2b2b2b', seed + 8);
-            drawSketchyLine(cx - 11, cy - 12 + pulse, cx + 11, cy - 12 + pulse, '#2b2b2b', 3, seed + 8);
-            ctx.strokeStyle = '#ffd43b';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.arc(cx, cy - 32 + pulse, 44, Math.PI + 0.2, Math.PI * 2 - 0.2);
-            ctx.stroke();
-            drawSketchyLine(cx - 32, cy + 22 + pulse, cx + 32, cy + 22 + pulse, '#fff3bf', 4, seed + 9);
-            drawSketchyCircle(cx, cy + 30 + pulse, 10, '#ffd43b', '#fff3bf', seed + 10);
-            drawSketchyLine(cx - 28, cy + 39 + pulse, cx + 28, cy + 39 + pulse, '#74c0fc', 4, seed + 11);
+            if (img && img.complete && img.naturalWidth > 0) {
+                ctx.drawImage(img, this.x, this.y + pulse, this.w, this.h);
+            } else {
+                drawSketchyRect(this.x, this.y + 20, this.w, this.h - 20, '#172554', '#2b2b2b', 4, Math.floor(this.x * 2));
+            }
             if (this.actionState === 'laser-fire') {
                 ctx.save();
                 ctx.strokeStyle = '#74c0fc';
@@ -2814,22 +2747,17 @@ class Boss {
                 ctx.shadowBlur = 12;
                 ctx.lineWidth = 7;
                 ctx.beginPath();
-                ctx.moveTo(cx - 13, cy - 35 + pulse);
-                ctx.lineTo(player.x < this.x ? 0 : levelWidth, cy - 28 + pulse);
-                ctx.moveTo(cx + 13, cy - 35 + pulse);
-                ctx.lineTo(player.x < this.x ? 0 : levelWidth, cy - 20 + pulse);
+                ctx.moveTo(cx - 28, this.y + 35 + pulse);
+                ctx.lineTo(player.x < this.x ? 0 : levelWidth, this.y + 42 + pulse);
+                ctx.moveTo(cx + 28, this.y + 35 + pulse);
+                ctx.lineTo(player.x < this.x ? 0 : levelWidth, this.y + 49 + pulse);
                 ctx.stroke();
                 ctx.restore();
             }
             ctx.fillStyle = '#fff3bf';
-            ctx.font = '24px Gochi Hand';
+            ctx.font = '22px Gochi Hand';
             ctx.textAlign = 'center';
-            ctx.fillText('GALLER LORD', cx, this.y - 16);
-            for (let i = 0; i < 4; i++) {
-                const starX = this.x + 18 + i * 42;
-                const starY = this.y - 8 + Math.sin(this.wobbleTimer + i) * 9;
-                ctx.fillText('✦', starX, starY);
-            }
+            ctx.fillText('GALLER LORD', cx, this.y - 12);
         }
         else if (this.type === 'blood-shark') {
             const img = enemyImages['blood-shark'];
@@ -3104,7 +3032,7 @@ function getLevelName(levelNum) {
         4: 'Level 4', 5: 'Level 5', 6: 'Level 6 (Poster)',
         7: 'Level 7', 8: 'Level 8', 9: 'Level 9 (Blood Shark)',
         10: 'Level 10', 11: 'Level 11', 12: 'Level 12 (Dragon Boss)',
-        13: 'Level 13', 14: 'Level 14', 15: 'Level 15 (Ladybug)',
+        13: 'Level 13', 14: 'Level 14', 15: 'Level 15 (Star Shell Bug)',
         16: 'Level 16', 17: 'Level 17', 18: 'Level 18 (Mada)',
         19: 'Level 19', 20: 'Level 20', 21: 'Level 21',
         22: 'Level 22', 23: 'Level 23', 24: 'Level 24',
@@ -3142,9 +3070,9 @@ function progressToNextLevel(nextLevelNum) {
         subtitle = "Prepare for two more levels before the Dragon Boss!";
     } else if (currentLevel === 12) {
         title = "DRAGON BOSS DEFEATED! 🐉";
-        subtitle = "Prepare for two more levels before Ladybug!";
+        subtitle = "Prepare for two more levels before Star Shell Bug!";
     } else if (currentLevel === 15) {
-        title = "LADYBUG DEFEATED! 🐞";
+        title = "STAR SHELL BUG DEFEATED! 🐞";
         subtitle = "Prepare for two more levels before Mada!";
     } else if (currentLevel === 18) {
         title = "MADA DEFEATED! 🟣";
@@ -4687,7 +4615,7 @@ function gameLoop() {
         ctx.fillStyle = '#ff6b6b';
         ctx.font = '22px Gochi Hand';
         ctx.textAlign = 'center';
-        const bossTitle = boss.type === 'nippin-king' ? 'NIPPIN KING' : (boss.type === 'mada' ? 'MADA' : (boss.type === 'blood-shark' ? 'BLOOD SHARK BOSS' : (boss.type === 'dragon-emperor' ? 'DRAGON BOSS' : (boss.type === 'star-empress' ? 'LADYBUG' : (boss.type === 'spark-bobby-boss' ? 'SPARK BALL' : (boss.type === 'shine-the-shine' ? 'SHINE THE SHINE' : (boss.type === 'secret-boss' ? 'SECRET BOSS' : (boss.type === 'galler-lord' ? 'GALLER LORD' : (boss.type === 'dungeon-king' ? 'DUNGEON KING' : (boss.type === 'dungeon-overlord' ? 'DUNGEON EMPEROR' : 'POSTER'))))))))));
+        const bossTitle = boss.type === 'nippin-king' ? 'NIPPIN KING' : (boss.type === 'mada' ? 'MADA' : (boss.type === 'blood-shark' ? 'BLOOD SHARK BOSS' : (boss.type === 'dragon-emperor' ? 'DRAGON BOSS' : (boss.type === 'star-empress' ? 'STAR SHELL BUG' : (boss.type === 'spark-bobby-boss' ? 'SPARK BALL' : (boss.type === 'shine-the-shine' ? 'SHINE THE SHINE' : (boss.type === 'secret-boss' ? 'SECRET BOSS' : (boss.type === 'galler-lord' ? 'GALLER LORD' : (boss.type === 'dungeon-king' ? 'DUNGEON KING' : (boss.type === 'dungeon-overlord' ? 'DUNGEON EMPEROR' : 'POSTER'))))))))));
         ctx.fillText(bossTitle, canvas.width / 2, barY - 6);
     }
 
@@ -4741,12 +4669,12 @@ function gameLoop() {
             ctx.fillText('🐉 BOSS BATTLE: DRAGON!', canvas.width / 2, bannerY + 28);
             ctx.font = '18px Patrick Hand';
             ctx.fillStyle = '#ff922b';
-            ctx.fillText('Jump on the Dragon boss, then prepare for Ladybug!', canvas.width / 2, bannerY + 52);
+            ctx.fillText('Jump on the Dragon boss, then prepare for Star Shell Bug!', canvas.width / 2, bannerY + 52);
         } else if (currentLevel === 15) {
-            ctx.fillText('🐞 BOSS BATTLE: LADYBUG!', canvas.width / 2, bannerY + 28);
+            ctx.fillText('🐞 BOSS BATTLE: STAR SHELL BUG!', canvas.width / 2, bannerY + 28);
             ctx.font = '18px Patrick Hand';
             ctx.fillStyle = '#ff922b';
-            ctx.fillText('Stun Ladybug, then stomp her shell!', canvas.width / 2, bannerY + 52);
+            ctx.fillText('Stun Star Shell Bug, then stomp its shell!', canvas.width / 2, bannerY + 52);
         } else if (currentLevel === 18) {
         ctx.fillText('🟣 BOSS BATTLE: Mada!', canvas.width / 2, bannerY + 28);
             ctx.font = '18px Patrick Hand';

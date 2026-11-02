@@ -92,15 +92,19 @@ test('Flop & Dope shows the Nippin dungeon guide without retired characters', as
     'Mada (Boss)',
     'Blood Shark',
     'Dragon Wing',
-    'Ladybug (Boss)',
+    'Star Shell Bug (Boss)',
     'Gray Pond',
     'Shark Fin Hazard',
     'Dungeon Emperor (Final Boss)',
   ]);
   await expect(page.getByText('Matera', { exact: true })).toHaveCount(0);
   await expect(page.locator('.guide-card h3').filter({ hasText: 'Worm' })).toHaveCount(0);
-  await expect(page.locator('.guide-nippin-art')).toBeVisible();
-  await expect(page.locator('.guide-nippin-king-art')).toBeVisible();
+  await expect(page.locator('img[src*="nippins.png"]')).toBeVisible();
+  await expect(page.locator('img[src*="nippin-king.png"]')).toBeVisible();
+  await expect(page.locator('img[src*="matera.png"]')).toBeVisible();
+  await expect(page.locator('img[src*="shine-the-shine.png"]')).toBeVisible();
+  await expect(page.locator('img[src*="galler-lord.png"]')).toBeVisible();
+  await expect(page.locator('img[src*="secret-boss.png"]')).toBeVisible();
 });
 
 test('Flop & Dope reaches the reordered Nippin and boss levels without browser errors', async ({ page }) => {
@@ -129,7 +133,7 @@ test('Flop & Dope replaces Spark Ball with Shine the Shine and exposes the optio
   await page.locator('#tab-guide').click();
   await expect(page.getByText(/fully metal ground robot with dazzling lights/)).toBeVisible();
   await expect(page.getByText(/visible giant iron robot with a giant iron axe/)).toBeVisible();
-  await expect(page.locator('.guide-secret-placeholder')).toBeVisible();
+  await expect(page.locator('img[src*="secret-boss.png"]')).toBeVisible();
   await page.locator('#tab-play').click();
   await expect(page.getByRole('button', { name: /Secret Boss/ })).toBeVisible();
   await page.locator('.character-card').first().click();
