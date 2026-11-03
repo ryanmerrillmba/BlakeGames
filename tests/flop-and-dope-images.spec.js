@@ -3,7 +3,9 @@ const { test, expect } = require('@playwright/test');
 test('Flop and Dope renders complete artwork at a readable size', async ({ page }) => {
   await page.goto('/flop-and-dope/index.html', { waitUntil: 'networkidle' });
 
-  const reportVisibleImages = async (selector) => page.locator(selector).evaluateAll((images) => images.map((image) => {
+  const reportVisibleImages = async (selector) => page.locator(selector).evaluateAll(async (images) => {
+    await Promise.all(images.map((image) => image.decode().catch(() => undefined)));
+    return images.map((image) => {
     const box = image.getBoundingClientRect();
     return {
       alt: image.alt,
@@ -29,7 +31,8 @@ test('Flop and Dope renders complete artwork at a readable size', async ({ page 
         return visible;
       })(),
     };
-  }));
+    });
+  });
 
   const heroReport = await reportVisibleImages('.hero-card-img');
   await page.locator('#tab-guide').click();
