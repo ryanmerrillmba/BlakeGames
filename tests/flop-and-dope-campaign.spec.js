@@ -47,5 +47,8 @@ test('Flop & Dope can enter every new boss stage without browser errors', async 
     await page.waitForTimeout(180);
   }
 
+  await expect(page.locator('#boss-hint-title')).toHaveText('How to Beat the Final Boss (Dungeon Emperor) 👑');
+  await expect(page.locator('#boss-hint-step-3')).toHaveText('3. 💥 Repeat until the Dungeon Emperor is defeated!');
+
   expect(failures).toEqual([]);
 });

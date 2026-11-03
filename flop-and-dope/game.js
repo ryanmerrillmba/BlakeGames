@@ -3043,6 +3043,62 @@ function getLevelName(levelNum) {
     return names[levelNum] || 'Level ' + levelNum;
 }
 
+const bossHints = {
+    3: {
+        title: 'How to Beat the Boss (Nippin King) 👑',
+        steps: ['1. 🟣 Clear the Nippins in the dungeon!', '2. ⚡ Jump on the king while he is bouncing!', '3. 💥 Repeat this 7 times to win!']
+    },
+    6: {
+        title: 'How to Beat the Boss (Poster) 👹',
+        steps: ['1. 🧱 Move away before Poster slams down!', '2. ⚡ Touch him after he lands flat to damage him.', '3. 💥 Repeat until Poster is defeated!']
+    },
+    9: {
+        title: 'How to Beat the Boss (Blood Shark) 🦈',
+        steps: ['1. 🦈 Dodge the shark fin and bouncing zaps!', '2. 🦘 Jump on Blood Shark when he is not whacking.', '3. 💥 Use a box to reflect his laser and win!']
+    },
+    12: {
+        title: 'How to Beat the Boss (Dragon Wing) 🐉',
+        steps: ['1. ⚡ Dodge the yellow zaps and spark-balls!', '2. 🦘 Jump on Dragon Wing when it swoops low.', '3. 💥 Repeat until the dragon is defeated!']
+    },
+    15: {
+        title: 'How to Beat the Boss (Star Shell Bug) 🐞',
+        steps: ['1. 🐞 Dodge the spinning shell!', '2. ⏳ Wait for Star Shell Bug to be stunned.', '3. 💥 Stomp the shell to deal damage!']
+    },
+    18: {
+        title: 'How to Beat the Boss (Mada) 🟣',
+        steps: ['1. 🟣 Dodge Mada\'s charge and sparks!', '2. 🦘 Jump on Mada when he lands.', '3. 💥 Bounce away and repeat until he is defeated!']
+    },
+    28: {
+        title: 'How to Beat the Boss (Shine the Shine) ✨',
+        steps: ['1. 🤖 Dodge the metal robot\'s bright eye sparks!', '2. 🦘 Jump on Shine while he stays on the ground.', '3. 💥 Repeat until Shine the Shine is defeated!']
+    },
+    31: {
+        title: 'How to Beat the Boss (Galler Lord) 🌌',
+        steps: ['1. 🌌 Dodge the starlight lasers from his eyes!', '2. 🦘 Bounce on Galler Lord\'s helmet while he bounds around.', '3. 💥 Repeat until the space mega is defeated!']
+    },
+    34: {
+        title: 'How to Beat the Final Boss (Dungeon Emperor) 👑',
+        steps: ['1. ⚡ Dodge his lasers and triple electric zaps!', '2. 🧱 Touch him after he slams flat to damage him.', '3. 💥 Repeat until the Dungeon Emperor is defeated!']
+    },
+    99: {
+        title: 'How to Beat the Secret Boss (Iron Egg King) ⚒️',
+        steps: ['1. ⚒️ Dodge the giant iron axe and stomps!', '2. 🥚 Destroy the eggs before the iron children hatch.', '3. 💥 Clear every child to stop the multiplying waves!']
+    }
+};
+
+function updateBossHint(levelNum = currentLevel) {
+    const title = document.getElementById('boss-hint-title');
+    const steps = [1, 2, 3].map(number => document.getElementById(`boss-hint-step-${number}`));
+    if (!title || steps.some(step => !step)) return;
+
+    const hint = bossHints[levelNum] || {
+        title: 'How to Clear This Level 📖',
+        steps: ['1. 🚶 Cross the platforms and defeat the Nippins!', '2. 🦘 Use your hero\'s power to reach the goal.', '3. ⭐ Boss stages unlock as you progress!']
+    };
+    title.textContent = hint.title;
+    steps.forEach((step, index) => { step.textContent = hint.steps[index]; });
+}
+
 function progressToNextLevel(nextLevelNum) {
     gameRunning = false;
     
@@ -3552,6 +3608,7 @@ function loadLevel(levelNum) {
         player.lavaShieldTimer = 0;
     }
 
+    updateBossHint(levelNum);
     updateHUD();
 }
 
