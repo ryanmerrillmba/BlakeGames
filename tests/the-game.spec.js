@@ -85,5 +85,7 @@ test.describe("The Game — 3D Collision & Movement Tests", () => {
     await expect(badge).toContainText("Bad Guys Blocked by Solid Walls");
     await expect(badge).toContainText("Bad Guys Blocked by Trees");
     await expect(badge).toContainText("Monster Physics & Sliding Engine Active");
+    await expect(badge).toContainText("All 3 Blender 3D Shop Weapons Loaded & Equippable");
+    await expect(badge).toContainText("Air & Tree Pickup + Follow (Witch, Bat, Spider)");
   });
 });

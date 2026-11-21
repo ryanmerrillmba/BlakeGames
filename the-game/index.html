@@ -1738,6 +1738,33 @@
             results.push({ name: "Smooth Hero Hair + Lab Cauldrons + Bad Guy Zone Card", pass: Boolean(hasSmoothHair && hasCauldrons && zoneCardEl && labPodLights.length >= 10) });
             const hasAll3Weapons = Boolean(weaponMeshes[1] && weaponMeshes[2] && weaponMeshes[3]);
             results.push({ name: "All 3 Blender 3D Shop Weapons Loaded & Equippable", pass: hasAll3Weapons });
+
+            // Permanent Air & Tree Pickup + Follow Physics Test (Witch, Bat, Spider!)
+            const airTargets = [
+              { key: "Monster_Witch", flies: true, startY: 2.7 },
+              { key: "Monster_Bat", flies: true, startY: 2.4 },
+              { key: "Monster_Spider", flies: false, startY: 2.69 },
+            ];
+            let airFollowPass = true;
+            for (const tCfg of airTargets) {
+              const mObj = getMonsterByKey(tCfg.key);
+              if (!mObj) { airFollowPass = false; break; }
+              const savedPos = mObj.position.clone();
+              mObj.position.set(10.0, tCfg.startY, 20.0);
+              // Hero walks underneath the airborne/tree monster
+              player.position.set(10.0, 0, 22.4);
+              const pickedUp = canPickupMonster(mObj, player, tCfg.flies);
+              // Hero walks 8m away & monster must follow along!
+              for (let i = 0; i < 45; i++) {
+                player.position.z += 0.18;
+                followCapturedMonster(mObj, player, 0, 1, 0.05, { flies: tCfg.flies, followDist: 2.0 });
+              }
+              const endDist = Math.hypot(player.position.x - mObj.position.x, player.position.z - mObj.position.z);
+              const heightOk = tCfg.flies ? (mObj.position.y > 1.0) : (mObj.position.y < 0.25);
+              if (!pickedUp || endDist > 3.6 || !heightOk) airFollowPass = false;
+              mObj.position.copy(savedPos);
+            }
+            results.push({ name: "Air & Tree Pickup + Follow (Witch, Bat, Spider)", pass: airFollowPass });
             isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
@@ -2243,6 +2270,55 @@
         return moved;
       }
 
+      // Dedicated Air & Ground Capture-Pickup + Follow Physics (Witch, Bat, Spider, Flyers & Ground!)
+      function getPickupRadius(monsterObj, flies = false) {
+        if (!monsterObj) return 2.4;
+        const isAirOrTree = flies || monsterObj.name === "Monster_Spider" || monsterObj.position.y > 0.6;
+        return isAirOrTree ? 3.4 : 2.4;
+      }
+
+      function canPickupMonster(monsterObj, playerObj, flies = false) {
+        if (!monsterObj || !playerObj) return false;
+        const distXZ = Math.hypot(playerObj.position.x - monsterObj.position.x, playerObj.position.z - monsterObj.position.z);
+        return distXZ < getPickupRadius(monsterObj, flies);
+      }
+
+      function followCapturedMonster(monsterObj, playerObj, forwardX, forwardZ, dt, opts = {}) {
+        if (!monsterObj || !playerObj) return false;
+        const flies = Boolean(opts.flies);
+        const followDist = opts.followDist || 2.0;
+        const tx = playerObj.position.x - forwardX * followDist;
+        const tz = playerObj.position.z - forwardZ * followDist;
+        const dx = tx - monsterObj.position.x;
+        const dz = tz - monsterObj.position.z;
+        const dist = Math.hypot(dx, dz);
+
+        // Spider drops cleanly down from its tree when picked up; flyers hover smoothly behind the hero!
+        if (flies) {
+          const targetY = 1.55 + Math.sin(performance.now() * 0.0045 + monsterObj.id) * 0.22;
+          monsterObj.position.y = THREE.MathUtils.lerp(monsterObj.position.y, targetY, Math.min(1, dt * 5.0));
+        } else if (monsterObj.position.y > 0.02) {
+          monsterObj.position.y = Math.max(0, monsterObj.position.y - 6.5 * dt);
+        }
+
+        // Airborne & tree-dropping monsters glide over trees/ground obstacles; ground monsters respect walls & trees
+        const isAirborne = flies || monsterObj.position.y > 0.35;
+        const stepScale = Math.min(0.22, Math.max(0.10, dt * 6.0));
+        const moved = moveMonsterSafe(monsterObj, dx * stepScale, dz * stepScale, {
+          wallsOnly: isAirborne,
+          ignoreCages: true
+        });
+
+        // Smart doorway/obstacle recovery: if a captured monster ever gets snagged > 5.5m behind, glide it around to stay with the hero!
+        const newDist = Math.hypot(tx - monsterObj.position.x, tz - monsterObj.position.z);
+        if (newDist > 5.5 || (!moved && newDist > 2.8)) {
+          const catchUp = Math.min(0.28, dt * 5.5);
+          monsterObj.position.x += (tx - monsterObj.position.x) * catchUp;
+          monsterObj.position.z += (tz - monsterObj.position.z) * catchUp;
+        }
+        return true;
+      }
+
       const clock = new THREE.Clock();
       const flashWorldPos = new THREE.Vector3();
 
@@ -2435,25 +2511,25 @@
                 }
               }
             } else if (activeLabCaptured) {
-              const tx = player.position.x - forwardX * 2.0;
-              const tz = player.position.z - forwardZ * 2.0;
-              moveMonsterSafe(def.obj, (tx - def.obj.position.x) * 0.1, (tz - def.obj.position.z) * 0.1, { wallsOnly: def.flies });
+              followCapturedMonster(def.obj, player, forwardX, forwardZ, dt, { flies: def.flies, followDist: 2.0 });
             } else {
               const dxM = player.position.x - def.obj.position.x;
               const dzM = player.position.z - def.obj.position.z;
               const distM = Math.hypot(dxM, dzM);
-              if (distM < 10.0 && distM >= 2.2) {
+              const pickupR = getPickupRadius(def.obj, def.flies);
+              if (distM < 11.0 && distM >= pickupR) {
                 // Spider jumps down from the tree when you get close!
                 if (def.key === "Monster_Spider" && def.obj.position.y > 0.05) {
                   def.obj.position.y = Math.max(0, def.obj.position.y - 6.0 * dt);
                   objectiveEl.textContent = "🕷️ WHOA! The Spider JUMPED DOWN from the tree to get you!";
                 }
-                moveMonsterSafe(def.obj, (dxM / distM) * 2.4 * dt, (dzM / distM) * 2.4 * dt, { wallsOnly: def.flies });
-                def.obj.rotation.y = Math.atan2(dxM, dzM);
+                moveMonsterSafe(def.obj, (dxM / distM) * 2.4 * dt, (dzM / distM) * 2.4 * dt, { wallsOnly: def.flies || def.obj.position.y > 0.35 });
+                faceMonsterForward(def.obj, dxM, dzM);
               }
-              if (distM < 2.2) {
+              if (canPickupMonster(def.obj, player, def.flies)) {
                 activeLabCaptured = true;
                 playChime();
+                playMonsterSFX(def.key);
                 objectiveEl.textContent = `You caught the ${def.label}! Bring it to Lab Pod ${def.podIdx + 1} and press SPACEBAR to throw it in!`;
               }
             }
@@ -2466,21 +2542,20 @@
           shadowGuy.position.y = 1.6 + Math.sin(clock.elapsedTime * 4) * 0.35;
           shadowGuy.rotation.z = Math.sin(clock.elapsedTime * 3.5) * 0.14;
           if (shadowCaptured) {
-            const tx = player.position.x - forwardX * 2.0;
-            const tz = player.position.z - forwardZ * 2.0;
-            moveMonsterSafe(shadowGuy, (tx - shadowGuy.position.x) * 0.1, (tz - shadowGuy.position.z) * 0.1, { wallsOnly: true });
+            followCapturedMonster(shadowGuy, player, forwardX, forwardZ, dt, { flies: true, followDist: 2.0 });
           } else {
             const dxSh = player.position.x - shadowGuy.position.x;
             const dzSh = player.position.z - shadowGuy.position.z;
             const distSh = Math.hypot(dxSh, dzSh);
-            if (distSh < 12.0 && distSh >= 2.2) {
+            if (distSh < 12.0 && distSh >= 3.4) {
               moveMonsterSafe(shadowGuy, (dxSh / distSh) * 3.0 * dt, (dzSh / distSh) * 3.0 * dt, { wallsOnly: true });
-              shadowGuy.rotation.y = Math.atan2(dxSh, dzSh);
+              faceMonsterForward(shadowGuy, dxSh, dzSh);
               objectiveEl.textContent = "👻 FLYING SHADOW GUY is swooping at you! Catch him for your House Cage!";
             }
-            if (distSh < 2.2) {
+            if (canPickupMonster(shadowGuy, player, true)) {
               shadowCaptured = true;
               playChime();
+              playMonsterSFX("Monster_ShadowGuy");
               objectiveEl.textContent = "👻 You caught the FLYING SHADOW GUY! Bring him to House Cage 1 and throw him in!";
             }
           }
@@ -2491,14 +2566,12 @@
           ghostGuy.visible = true;
           ghostGuy.position.y = 1.4 + Math.sin(clock.elapsedTime * 3.5) * 0.3;
           if (ghostCaptured) {
-            const tx = player.position.x - forwardX * 2.0;
-            const tz = player.position.z - forwardZ * 2.0;
-            moveMonsterSafe(ghostGuy, (tx - ghostGuy.position.x) * 0.1, (tz - ghostGuy.position.z) * 0.1, { wallsOnly: true });
+            followCapturedMonster(ghostGuy, player, forwardX, forwardZ, dt, { flies: true, followDist: 2.0 });
           } else {
             const dxG = player.position.x - ghostGuy.position.x;
             const dzG = player.position.z - ghostGuy.position.z;
             const distG = Math.hypot(dxG, dzG);
-            if (distG < 14.0 && distG >= 2.2) {
+            if (distG < 14.0 && distG >= 3.4) {
               ghostTeleportTimer += dt;
               if (ghostTeleportTimer > 2.8) {
                 ghostTeleportTimer = 0;
@@ -2509,9 +2582,10 @@
                 objectiveEl.textContent = "👻💨 The Ghost TELEPORTED! Track him down with your flashlight!";
               }
             }
-            if (distG < 2.2) {
+            if (canPickupMonster(ghostGuy, player, true)) {
               ghostCaptured = true;
               playChime();
+              playMonsterSFX("Monster_Ghost");
               objectiveEl.textContent = "👻💨 You caught the TELEPORTING GHOST! Bring him to House Cage 2 and throw him in!";
             }
           }
@@ -2669,20 +2743,19 @@
                 }
               }
             } else if (activeBossCaptured) {
-              const tx = player.position.x - forwardX * 2.2;
-              const tz = player.position.z - forwardZ * 2.2;
-              moveMonsterSafe(bdef.obj, (tx - bdef.obj.position.x) * 0.1, (tz - bdef.obj.position.z) * 0.1, { wallsOnly: bdef.flies });
+              followCapturedMonster(bdef.obj, player, forwardX, forwardZ, dt, { flies: bdef.flies, followDist: 2.2 });
             } else {
               const dxB = player.position.x - bdef.obj.position.x;
               const dzB = player.position.z - bdef.obj.position.z;
               const distB = Math.hypot(dxB, dzB);
-              if (distB < 14.0 && distB >= 2.3) {
+              if (distB < 14.0 && distB >= getPickupRadius(bdef.obj, bdef.flies)) {
                 moveMonsterSafe(bdef.obj, (dxB / distB) * bdef.speed * dt, (dzB / distB) * bdef.speed * dt, { wallsOnly: bdef.flies });
-                bdef.obj.rotation.y = Math.atan2(dxB, dzB);
+                faceMonsterForward(bdef.obj, dxB, dzB);
               }
-              if (distB < 2.3) {
+              if (canPickupMonster(bdef.obj, player, bdef.flies)) {
                 activeBossCaptured = true;
                 playChime();
+                playMonsterSFX(bdef.key);
                 objectiveEl.textContent = `🔥 You caught ${bdef.label}! Bring it to House Cage ${bdef.cageIdx + 1} & press SPACEBAR!`;
               }
             }
