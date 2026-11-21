@@ -175,6 +175,7 @@
     <script type="module">
       import * as THREE from "three";
       import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+      import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
       import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
       import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
       import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
@@ -192,8 +193,15 @@
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.15;
+      renderer.toneMappingExposure = 1.18;
       document.body.appendChild(renderer.domElement);
+
+      // 10x Real-Time PBR Reflections: PMREM RoomEnvironment IBL for metallic armor, clearcoat slime & glossy eyes!
+      const pmremGenerator = new THREE.PMREMGenerator(renderer);
+      const envTexture = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+      scene.environment = envTexture;
+      scene.environmentIntensity = 0.72;
+      pmremGenerator.dispose();
 
       // Post-Processing Bloom Composer (cinematic glow matching all_guys.png!)
       const composer = new EffectComposer(renderer);
@@ -567,31 +575,205 @@
         }
       }
 
-      // Animate EVERY monster's arms, legs, wings, tails, AND Magical Eyeball's spinning rings & magic dust!
-      function animateMonsterLimbs(root, t) {
-        if (!root || !root.visible) return;
-        const swing = Math.sin(t * 10) * 0.45;
-        root.traverse((child) => {
-          const n = child.name;
-          if (n.includes("LegL") || n.includes("Leg_L") || n.includes("ArmR") || n.includes("Arm_R") || n.includes("_FL") || n.includes("_BR")) {
-            child.rotation.x = swing;
-          } else if (n.includes("LegR") || n.includes("Leg_R") || n.includes("ArmL") || n.includes("Arm_L") || n.includes("_FR") || n.includes("_BL")) {
-            child.rotation.x = -swing;
-          } else if (n.includes("WingPivot_L") || n.includes("Wing_L")) {
-            child.rotation.z = Math.sin(t * 14) * 0.6;
-          } else if (n.includes("WingPivot_R") || n.includes("Wing_R")) {
-            child.rotation.z = -Math.sin(t * 14) * 0.6;
-          } else if (n.includes("Tail")) {
-            child.rotation.z = Math.sin(t * 8) * 0.35;
-          } else if (n === "Eye_MagicRing_1") {
-            child.rotation.z = t * 2.5;
-          } else if (n === "Eye_MagicRing_2") {
-            child.rotation.y = -t * 3.0;
-          } else if (n.startsWith("Eye_MagicDust_")) {
-            const sc = 0.7 + Math.sin(t * 6 + child.id) * 0.45;
-            child.scale.setScalar(sc);
+      // =========================================================================
+      // LIFELIKE ARTICULATED CHARACTER ANIMATION ENGINE (Idle, Walk, Run, Fly, Slither & Alive-In-Cage!)
+      // =========================================================================
+      function getMonsterRig(root) {
+        if (root.userData.rig) return root.userData.rig;
+        const rig = {
+          torso: null, head: null, hipL: null, hipR: null, shL: null, shR: null,
+          wingL: null, wingR: null, tail: null,
+          quadLegs: [], spiderLegs: [], roboArms: [], snakeSegs: [], magicRings: [],
+          baseTorsoY: 0, baseHeadY: 0, baseSnakePos: [],
+          phase: Math.random() * Math.PI * 2,
+          prevX: root.position.x, prevZ: root.position.z,
+          smoothSpeed: 0
+        };
+        root.traverse((c) => {
+          const n = c.name;
+          if (n.includes("_TorsoPivot")) { rig.torso = c; rig.baseTorsoY = c.position.y; }
+          else if (n.includes("_HeadPivot")) { rig.head = c; rig.baseHeadY = c.position.y; }
+          else if (n.includes("_HipPivot_L")) rig.hipL = c;
+          else if (n.includes("_HipPivot_R")) rig.hipR = c;
+          else if (n.includes("_ShoulderPivot_L")) rig.shL = c;
+          else if (n.includes("_ShoulderPivot_R")) rig.shR = c;
+          else if (n.includes("WingPivot_L")) rig.wingL = c;
+          else if (n.includes("WingPivot_R")) rig.wingR = c;
+          else if (n.includes("_TailPivot")) rig.tail = c;
+          else if (n.includes("_HipPivot_FL") || n.includes("_HipPivot_FR") || n.includes("_HipPivot_BL") || n.includes("_HipPivot_BR")) {
+            rig.quadLegs.push({ obj: c, isDiagA: n.includes("_FL") || n.includes("_BR") });
+          } else if (n.includes("Spider_LegPivot_")) {
+            rig.spiderLegs.push({ obj: c, idx: parseInt(n.split("_").pop(), 10) || 0, baseRotY: c.rotation.y });
+          } else if (n.includes("Robo_ArmPivot_")) {
+            rig.roboArms.push({ obj: c, idx: parseInt(n.split("_").pop(), 10) || 0 });
+          } else if (n.startsWith("SnakeSeg_")) {
+            const idx = parseInt(n.split("_").pop(), 10) || 0;
+            rig.snakeSegs.push({ obj: c, idx, baseX: c.position.x, baseY: c.position.y });
+          } else if (n.includes("MagicRing_")) {
+            rig.magicRings.push(c);
           }
         });
+        rig.snakeSegs.sort((a, b) => a.idx - b.idx);
+        root.userData.rig = rig;
+        return rig;
+      }
+
+      function updateLifelikeMonster(root, dt, t, playerObj) {
+        if (!root || !root.visible) return;
+        const rig = getMonsterRig(root);
+        const safeDt = Math.max(dt, 0.001);
+        const vx = (root.position.x - rig.prevX) / safeDt;
+        const vz = (root.position.z - rig.prevZ) / safeDt;
+        const rawSpeed = Math.hypot(vx, vz);
+        rig.prevX = root.position.x;
+        rig.prevZ = root.position.z;
+
+        // Smooth speed blend (0 = standing/caged idle, 1 = full walk/run/chase/follow!)
+        rig.smoothSpeed = THREE.MathUtils.lerp(rig.smoothSpeed, Math.min(rawSpeed / 2.2, 1.4), 0.16);
+        const moveBlend = Math.min(rig.smoothSpeed, 1.0);
+        const isMoving = moveBlend > 0.08;
+
+        // Advance personal walk/idle phase smoothly
+        const key = root.name || "";
+        const freq = key.includes("Zombie") || key.includes("Mummy") ? 6.5 :
+                     key.includes("BoneBreaker") || key.includes("Frankenstein") ? 7.2 :
+                     key.includes("Spider") ? 16.0 :
+                     key.includes("Clown") ? 11.5 : 9.5;
+        rig.phase += dt * (2.2 + moveBlend * freq);
+        const ph = rig.phase;
+
+        // When moving (including following player after capture!), face direction of travel naturally
+        if (rawSpeed > 0.35 && !key.includes("Eyeball")) {
+          const targetYaw = Math.atan2(vx, vz);
+          let diff = targetYaw - root.rotation.y;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          root.rotation.y += diff * Math.min(1, dt * 8.0);
+        }
+
+        // 1) BIPED LOCOMOTION + ALIVE IDLE BREATHING (Clown, LaserGuy, Vampire, Skeleton, Frank, Zombie, Mummy, Pumpkin, Werewolf, BoneBreaker, Robot)
+        if (rig.hipL && rig.hipR) {
+          const stride = Math.sin(ph) * (0.68 * moveBlend);
+          rig.hipL.rotation.x = stride;
+          rig.hipR.rotation.x = -stride;
+        }
+        if (rig.shL && rig.shR) {
+          const isOutstretched = key.includes("Zombie") || key.includes("Mummy");
+          const isHammerBoss = key.includes("BoneBreaker");
+          const idleArm = Math.sin(t * 2.2 + rig.phase * 0.1) * 0.08;
+          const armSwing = Math.sin(ph) * (0.58 * moveBlend);
+          if (isOutstretched) {
+            rig.shL.rotation.x = -0.15 + Math.sin(t * 2.8) * 0.12 + armSwing * 0.35;
+            rig.shR.rotation.x = -0.15 + Math.cos(t * 2.8) * 0.12 - armSwing * 0.35;
+            rig.shL.rotation.z = Math.sin(t * 2.2) * 0.06;
+            rig.shR.rotation.z = -Math.sin(t * 2.2) * 0.06;
+          } else if (isHammerBoss) {
+            rig.shL.rotation.x = -armSwing * 0.8 + idleArm;
+            // Heft & swing the massive Bone-Breaker warhammer!
+            rig.shR.rotation.x = armSwing * 0.65 + Math.sin(t * 2.6) * 0.14;
+          } else {
+            rig.shL.rotation.x = -armSwing + idleArm;
+            rig.shR.rotation.x = armSwing - idleArm;
+            rig.shL.rotation.z = 0.05 + Math.sin(t * 2.0) * 0.04;
+            rig.shR.rotation.z = -0.05 - Math.sin(t * 2.0) * 0.04;
+          }
+        }
+
+        // 2) TORSO BREATHING, WEIGHT-SHIFT SWAY & DOUBLE-FREQUENCY WALK BOUNCE
+        if (rig.torso) {
+          const breathe = Math.sin(t * 2.6 + root.id) * 0.032;
+          const walkBounce = Math.abs(Math.sin(ph)) * 0.11 * moveBlend;
+          rig.torso.position.y = rig.baseTorsoY + breathe + walkBounce;
+          rig.torso.rotation.y = Math.sin(ph) * 0.14 * moveBlend + Math.sin(t * 1.4 + root.id) * 0.06 * (1 - moveBlend);
+          rig.torso.rotation.z = Math.cos(ph) * 0.06 * moveBlend + Math.sin(t * 1.8 + root.id) * 0.035;
+          rig.torso.rotation.x = 0.08 * moveBlend;
+        }
+
+        // 3) HEAD TRACKING (Looks toward Blake when nearby + curious idle head tilt!)
+        if (rig.head) {
+          let lookYaw = Math.sin(t * 1.5 + root.id) * 0.22;
+          if (playerObj) {
+            const dxP = playerObj.position.x - root.position.x;
+            const dzP = playerObj.position.z - root.position.z;
+            if (Math.hypot(dxP, dzP) < 11.0) {
+              const worldYaw = Math.atan2(dxP, dzP);
+              let rel = worldYaw - root.rotation.y;
+              while (rel > Math.PI) rel -= Math.PI * 2;
+              while (rel < -Math.PI) rel += Math.PI * 2;
+              lookYaw = THREE.MathUtils.clamp(rel, -0.75, 0.75);
+            }
+          }
+          rig.head.rotation.y = THREE.MathUtils.lerp(rig.head.rotation.y, lookYaw, 0.10);
+          rig.head.rotation.z = Math.sin(t * 2.1 + root.id) * 0.08;
+        }
+
+        // 4) QUADRUPED (Cat) — 4-Leg Trot + Wagging Tail
+        if (rig.quadLegs.length > 0) {
+          const qSwing = Math.sin(ph * 1.1) * (0.65 * moveBlend);
+          for (const ql of rig.quadLegs) {
+            ql.obj.rotation.x = ql.isDiagA ? qSwing : -qSwing;
+          }
+        }
+        if (rig.tail) {
+          rig.tail.rotation.z = Math.sin(t * (4.0 + moveBlend * 5.0) + root.id) * 0.42;
+          rig.tail.rotation.x = Math.sin(t * 2.5) * 0.12;
+        }
+
+        // 5) 8-ARM ELECTRIC ROBOT — All 8 Arms Flexing & Crackling Independently!
+        if (rig.roboArms.length > 0) {
+          for (const ra of rig.roboArms) {
+            const wave = Math.sin(t * (4.5 + moveBlend * 4.5) + ra.idx * 0.85);
+            ra.obj.rotation.x = wave * (0.28 + 0.22 * moveBlend);
+            ra.obj.rotation.z = Math.cos(t * 3.8 + ra.idx * 1.1) * 0.18;
+          }
+        }
+
+        // 6) SPIDER — 8-Leg Alternating Wave Skitter (alive idle twitch + fast skitter!)
+        if (rig.spiderLegs.length > 0) {
+          for (const sl of rig.spiderLegs) {
+            const amp = 0.12 + 0.45 * moveBlend;
+            const sWave = Math.sin(ph + sl.idx * 1.55) * amp;
+            sl.obj.rotation.z = sWave * 0.65;
+            sl.obj.rotation.y = sl.baseRotY + Math.cos(ph + sl.idx * 1.55) * amp * 0.5;
+          }
+        }
+
+        // 7) WINGED FLYERS (Bat, Flying Pumpkin) — Rapid Flapping + Idle Wing Breathing
+        if (rig.wingL && rig.wingR) {
+          const flapSpeed = isMoving ? 15.0 : 8.5;
+          const flapAmp = isMoving ? 0.72 : 0.42;
+          const flap = Math.sin(t * flapSpeed + root.id) * flapAmp;
+          rig.wingL.rotation.z = flap;
+          rig.wingR.rotation.z = -flap;
+        }
+
+        // 8) RAINBOW SNAKE — True Sinusoidal S-Curve Slithering across all 12 segments!
+        if (rig.snakeSegs.length > 0) {
+          const slitherAmp = 0.22 + 0.34 * moveBlend;
+          const slitherSpd = 3.5 + 4.5 * moveBlend;
+          for (const seg of rig.snakeSegs) {
+            const wave = Math.sin(t * slitherSpd - seg.idx * 0.58);
+            seg.obj.position.x = seg.baseX + wave * slitherAmp * (0.35 + seg.idx * 0.08);
+            seg.obj.rotation.y = Math.cos(t * slitherSpd - seg.idx * 0.58) * 0.28;
+            if (seg.idx === 0) {
+              seg.obj.position.y = seg.baseY + Math.sin(t * 3.0) * 0.08;
+            }
+          }
+        }
+
+        // 9) SLIME GUY — Squash-and-Stretch Gelatinous Hop & Jiggle!
+        if (key === "Monster_SlimeGuy") {
+          const hop = Math.sin(t * (4.5 + moveBlend * 4.0));
+          const stretch = 1.0 + hop * (0.12 + 0.16 * moveBlend);
+          const squash = 1.0 / Math.sqrt(Math.max(0.5, stretch));
+          root.scale.set(squash, stretch, squash);
+        }
+
+        // 10) MAGICAL EYEBALL & SHADOW GUY — Orbiting Magic Rings & Sparks!
+        for (let i = 0; i < rig.magicRings.length; i++) {
+          rig.magicRings[i].rotation.y = t * (i % 2 === 0 ? 2.4 : -3.1);
+          rig.magicRings[i].rotation.z = Math.sin(t * 1.8 + i) * 0.35;
+        }
       }
 
       const objectiveEl = document.getElementById("objective");
@@ -952,8 +1134,15 @@
             results.push({ name: "House Door + Crafting Table + Portal + 3 Cages", pass: Boolean(craftObj && portalObj && cabinDoorObj && gltf.scene.getObjectByName("House_Cage_Base_0")) });
             results.push({ name: "Red Laser Guy Far Away in Forest", pass: Boolean(laserObj && laserObj.position.z > 40) });
             results.push({ name: "Real-Time Shadows + ACES ToneMapping", pass: Boolean(renderer.shadowMap.enabled && renderer.toneMapping === THREE.ACESFilmicToneMapping) });
+            results.push({ name: "PMREM IBL Metallic Reflections", pass: Boolean(scene.environment) });
             results.push({ name: "Bloom Post-Processing + 260 Fireflies", pass: Boolean(bloomEnabled && PARTICLE_COUNT >= 200) });
             results.push({ name: "3D Hip/Shoulder Walk Pivots + Mixer", pass: Boolean(legL && legR && legL.name.includes("HipPivot")) });
+            const allMonstersForTest = [clown, laserGuy, slimeGuy, shadowGuy, ghostGuy, ...labMonsterDefs.map((d) => d.obj), ...houseBossDefs.map((b) => b.obj)].filter(Boolean);
+            const riggedCount = allMonstersForTest.filter((m) => {
+              const r = getMonsterRig(m);
+              return Boolean(r.torso || r.head || r.hipL || r.wingL || r.snakeSegs.length > 0 || r.roboArms.length > 0 || r.spiderLegs.length > 0);
+            }).length;
+            results.push({ name: `Lifelike Articulated Monster Rigs (${riggedCount}/${allMonstersForTest.length})`, pass: riggedCount === allMonstersForTest.length && riggedCount >= 18 });
 
             // Restore player (or stay in House if ?test=house)
             if (new URLSearchParams(window.location.search).get("test") === "house") {
@@ -1383,39 +1572,7 @@
         const dt = Math.min(clock.getDelta(), 0.05);
 
         if (!player) {
-          // Update weapon attack ring flash & stun timer + animate EVERY visible monster's limbs!
-        if (attackFlashTimer > 0) {
-          attackFlashTimer -= dt;
-          attackRing.scale.setScalar(1.0 + (0.35 - attackFlashTimer) * 4.0);
-          if (attackFlashTimer <= 0) {
-            attackRing.visible = false;
-            attackRing.scale.setScalar(1.0);
-          }
-        }
-        if (monsterStunTimer > 0) monsterStunTimer -= dt;
-        const animT = clock.elapsedTime;
-        animateMonsterLimbs(clown, animT);
-        animateMonsterLimbs(laserGuy, animT);
-        animateMonsterLimbs(shadowGuy, animT);
-        for (const d of labMonsterDefs) animateMonsterLimbs(d.obj, animT);
-        for (const b of houseBossDefs) animateMonsterLimbs(b.obj, animT);
-
-        // Play spooky ambient noises every few seconds!
-        ambientSoundTimer += dt;
-        if (ambientSoundTimer > 4.5) {
-          ambientSoundTimer = 0;
-          if (audioCtx.state === "running") playSpookyForestNoise();
-        }
-
-        // Update Blender glTF AnimationMixer & floating forest fireflies!
-        if (mixer) mixer.update(dt);
-        if (fireflies) {
-          fireflies.position.y = Math.sin(clock.elapsedTime * 0.9) * 0.45;
-          fireflies.rotation.y = Math.sin(clock.elapsedTime * 0.15) * 0.04;
-        }
-
-        drawMinimap();
-        composer.render();
+          composer.render();
           return;
         }
 
@@ -1484,15 +1641,6 @@
             const moveDist = Math.hypot(tx - laserGuy.position.x, tz - laserGuy.position.z);
             laserGuy.position.x += (tx - laserGuy.position.x) * 0.1;
             laserGuy.position.z += (tz - laserGuy.position.z) * 0.1;
-            laserGuy.rotation.y = player.rotation.y;
-            if (moveDist > 0.15) {
-              const lSwing = Math.sin(clock.elapsedTime * 12) * 0.6;
-              if (laserLegL) laserLegL.rotation.x = lSwing;
-              if (laserLegR) laserLegR.rotation.x = -lSwing;
-            } else {
-              if (laserLegL) laserLegL.rotation.x *= 0.8;
-              if (laserLegR) laserLegR.rotation.x *= 0.8;
-            }
             laserBeam.visible = false;
           } else {
             const dxL = player.position.x - laserGuy.position.x;
@@ -1532,13 +1680,11 @@
         // Slime Guy ONLY active after Laser Guy is caged!
         if (slimeGuy && laserInCage && !slimeInCage && !throwingSlime) {
           slimeGuy.visible = true;
-          slimeGuy.scale.y = 1.0 + Math.sin(clock.elapsedTime * 5) * 0.12;
           if (slimeCaptured) {
             const tx = player.position.x - forwardX * 2.0;
             const tz = player.position.z - forwardZ * 2.0;
             slimeGuy.position.x += (tx - slimeGuy.position.x) * 0.1;
             slimeGuy.position.z += (tz - slimeGuy.position.z) * 0.1;
-            slimeGuy.rotation.y = player.rotation.y;
           } else {
             const dxS = slimeGuy.position.x - player.position.x;
             const dzS = slimeGuy.position.z - player.position.z;
@@ -1599,7 +1745,6 @@
               const tz = player.position.z - forwardZ * 2.0;
               def.obj.position.x += (tx - def.obj.position.x) * 0.1;
               def.obj.position.z += (tz - def.obj.position.z) * 0.1;
-              def.obj.rotation.y = player.rotation.y;
             } else {
               const dxM = player.position.x - def.obj.position.x;
               const dzM = player.position.z - def.obj.position.z;
@@ -1633,7 +1778,6 @@
             const tz = player.position.z - forwardZ * 2.0;
             shadowGuy.position.x += (tx - shadowGuy.position.x) * 0.1;
             shadowGuy.position.z += (tz - shadowGuy.position.z) * 0.1;
-            shadowGuy.rotation.y = player.rotation.y;
           } else {
             const dxSh = player.position.x - shadowGuy.position.x;
             const dzSh = player.position.z - shadowGuy.position.z;
@@ -1661,7 +1805,6 @@
             const tz = player.position.z - forwardZ * 2.0;
             ghostGuy.position.x += (tx - ghostGuy.position.x) * 0.1;
             ghostGuy.position.z += (tz - ghostGuy.position.z) * 0.1;
-            ghostGuy.rotation.y = player.rotation.y;
           } else {
             const dxG = player.position.x - ghostGuy.position.x;
             const dzG = player.position.z - ghostGuy.position.z;
@@ -1724,7 +1867,6 @@
           const moveDist = Math.hypot(targetX - clown.position.x, targetZ - clown.position.z);
           clown.position.x += (targetX - clown.position.x) * 0.1;
           clown.position.z += (targetZ - clown.position.z) * 0.1;
-          clown.rotation.y = player.rotation.y;
           if (moveDist > 0.15) {
             const cSwing = Math.sin(clock.elapsedTime * 12) * 0.6;
             if (clownLegL) clownLegL.rotation.x = cSwing;
@@ -1853,7 +1995,6 @@
               const tz = player.position.z - forwardZ * 2.2;
               bdef.obj.position.x += (tx - bdef.obj.position.x) * 0.1;
               bdef.obj.position.z += (tz - bdef.obj.position.z) * 0.1;
-              bdef.obj.rotation.y = player.rotation.y;
             } else {
               const dxB = player.position.x - bdef.obj.position.x;
               const dzB = player.position.z - bdef.obj.position.z;
@@ -1967,11 +2108,13 @@
         }
         if (monsterStunTimer > 0) monsterStunTimer -= dt;
         const animT = clock.elapsedTime;
-        animateMonsterLimbs(clown, animT);
-        animateMonsterLimbs(laserGuy, animT);
-        animateMonsterLimbs(shadowGuy, animT);
-        for (const d of labMonsterDefs) animateMonsterLimbs(d.obj, animT);
-        for (const b of houseBossDefs) animateMonsterLimbs(b.obj, animT);
+        updateLifelikeMonster(clown, dt, animT, player);
+        updateLifelikeMonster(laserGuy, dt, animT, player);
+        updateLifelikeMonster(slimeGuy, dt, animT, player);
+        updateLifelikeMonster(shadowGuy, dt, animT, player);
+        updateLifelikeMonster(ghostGuy, dt, animT, player);
+        for (const d of labMonsterDefs) updateLifelikeMonster(d.obj, dt, animT, player);
+        for (const b of houseBossDefs) updateLifelikeMonster(b.obj, dt, animT, player);
 
         // Play spooky ambient noises every few seconds!
         ambientSoundTimer += dt;
