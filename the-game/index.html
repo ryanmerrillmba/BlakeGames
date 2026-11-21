@@ -535,6 +535,12 @@
       let stone = 0;
       let axeLevel = 0; // 0 = none, 1 = Lv.1 Axe + Pickaxe, 2 = Lv.2 Axe!
       let weaponTier = 0; // 0 = none, 1 = ⚡ Shock Blaster ($10), 2 = 🔥 Flame Sword ($20), 3 = 🌈 Freeze Ray ($35)
+      let weaponMeshes = [null, null, null, null];
+      function updateEquippedWeaponMesh() {
+        for (let i = 1; i <= 3; i++) {
+          if (weaponMeshes[i]) weaponMeshes[i].visible = (weaponTier === i);
+        }
+      }
       let attackFlashTimer = 0;
       let monsterStunTimer = 0;
       let borrowedMoney = false;
@@ -574,6 +580,7 @@
         if (money >= cost) {
           money -= cost;
           weaponTier += 1;
+          updateEquippedWeaponMesh();
           updateHudStats();
           playChime();
           objectiveEl.textContent = `🎉 Bought ${weaponNames[weaponTier]}! Press Q to blast & stun monsters!`;
@@ -1441,6 +1448,13 @@
           armL = gltf.scene.getObjectByName("Human_ShoulderPivot_L") || gltf.scene.getObjectByName("Human_Arm_L");
           armR = gltf.scene.getObjectByName("Human_ShoulderPivot_R") || gltf.scene.getObjectByName("Human_Arm_R");
           flashlightMesh = gltf.scene.getObjectByName("Flashlight_Body");
+          weaponMeshes = [
+            null,
+            gltf.scene.getObjectByName("Weapon_ShockBlaster"),
+            gltf.scene.getObjectByName("Weapon_FlameSword"),
+            gltf.scene.getObjectByName("Weapon_FreezeRay"),
+          ];
+          updateEquippedWeaponMesh();
 
           // Play native Blender glTF AnimationClips via THREE.AnimationMixer!
           if (gltf.animations && gltf.animations.length > 0) {
@@ -1722,6 +1736,8 @@
             const hasSmoothHair = Boolean(gltf.scene.getObjectByName("Human_SmoothHair") && !gltf.scene.getObjectByName("Human_HairBang"));
             const hasCauldrons = Boolean(gltf.scene.getObjectByName("Lab_Cauldron_Rim_0") && gltf.scene.getObjectByName("Lab_Cauldron_Rim_10"));
             results.push({ name: "Smooth Hero Hair + Lab Cauldrons + Bad Guy Zone Card", pass: Boolean(hasSmoothHair && hasCauldrons && zoneCardEl && labPodLights.length >= 10) });
+            const hasAll3Weapons = Boolean(weaponMeshes[1] && weaponMeshes[2] && weaponMeshes[3]);
+            results.push({ name: "All 3 Blender 3D Shop Weapons Loaded & Equippable", pass: hasAll3Weapons });
             isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
@@ -2264,7 +2280,7 @@
           const swing = Math.sin(walkTime) * 0.55;
           if (legL) legL.rotation.x = swing;
           if (legR) legR.rotation.x = -swing;
-          if (armL) armL.rotation.x = -swing * 0.8;
+          if (armL) armL.rotation.x = weaponTier > 0 ? 0.55 - swing * 0.25 : -swing * 0.8;
           if (armR) armR.rotation.x = 0.96 + swing * 0.2;
           stepTimer += dt;
           if (stepTimer > 0.28) {
@@ -2274,7 +2290,11 @@
         } else {
           if (legL) legL.rotation.x *= 0.8;
           if (legR) legR.rotation.x *= 0.8;
-          if (armL) armL.rotation.x *= 0.8;
+          if (armL) armL.rotation.x = weaponTier > 0 ? THREE.MathUtils.lerp(armL.rotation.x, 0.55, 0.2) : armL.rotation.x * 0.8;
+        }
+        // Dramatic weapon slash / blaster recoil when pressing Q!
+        if (armL && weaponTier > 0 && attackFlashTimer > 0) {
+          armL.rotation.x = 0.55 + Math.sin((attackFlashTimer / 0.35) * Math.PI) * (weaponTier === 2 ? 1.35 : -0.45);
         }
 
         // Update Flashlight beam directly from the flashlight in his hand pointing forward (-Z local)
