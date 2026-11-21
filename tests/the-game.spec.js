@@ -74,6 +74,9 @@ test.describe("The Game — 3D Collision & Movement Tests", () => {
     await expect(badge).toBeVisible({ timeout: 15000 });
     await expect(badge).toContainText("ALL COLLISION TESTS PASSED");
     await expect(badge).toContainText("House Door + Crafting Table + Portal");
-    await expect(badge).toContainText("Laser Guy in Forest");
+    await expect(badge).toContainText("Laser Guy");
+    await expect(badge).toContainText("Real-Time Shadows + ACES ToneMapping");
+    await expect(badge).toContainText("Bloom Post-Processing + 260 Fireflies");
+    await expect(badge).toContainText("3D Hip/Shoulder Walk Pivots + Mixer");
   });
 });
