@@ -99,6 +99,40 @@
         margin-top: 4px;
         font-weight: 700;
       }
+      #start-overlay {
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(circle at center, rgba(15, 23, 42, 0.85), rgba(2, 6, 23, 0.96));
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 40;
+        padding: 20px;
+        text-align: center;
+      }
+      #start-overlay img {
+        max-height: 62vh;
+        max-width: 90vw;
+        border-radius: 20px;
+        border: 3px solid #facc15;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85);
+        margin-bottom: 18px;
+      }
+      #start-play-btn {
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        color: #ffffff;
+        border: none;
+        font-size: 1.4rem;
+        font-weight: 800;
+        padding: 14px 38px;
+        border-radius: 999px;
+        cursor: pointer;
+        box-shadow: 0 10px 30px rgba(34, 197, 94, 0.45);
+      }
+      #start-play-btn:hover {
+        transform: scale(1.05);
+      }
     </style>
     <script type="importmap">
       {
@@ -110,6 +144,11 @@
     </script>
   </head>
   <body>
+    <div id="start-overlay">
+      <img src="./guys.png" alt="The Game Monsters" />
+      <button id="start-play-btn" type="button">▶ PLAY THE GAME!</button>
+    </div>
+
     <div id="hud">
       <div class="panel">
         <a class="back-btn" href="../index.html">← Back to Blake Games</a>
@@ -119,8 +158,9 @@
       <div class="panel" id="controls-hint">
         <strong>Move:</strong> Click/Drag Mouse, or W A S D / Arrows<br />
         <strong>Action:</strong> SPACEBAR / E &nbsp;|&nbsp; <strong>Doors:</strong> F &nbsp;|&nbsp; <strong>Attack:</strong> Q
-        <div style="margin-top:6px;">
+        <div style="margin-top:6px; display:flex; gap:6px; justify-content:flex-end;">
           <button id="shop-btn" type="button" style="background:#f59e0b;color:#0f172a;border:none;border-radius:8px;padding:5px 10px;font-weight:800;cursor:pointer;">🛒 Buy Crazy Weapon ($10)</button>
+          <button id="battle-btn" type="button" style="background:#ef4444;color:#ffffff;border:none;border-radius:8px;padding:5px 10px;font-weight:800;cursor:pointer;">⚔️ Fight Outside!</button>
         </div>
       </div>
     </div>
@@ -138,6 +178,90 @@
 
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0x334155);
+
+      // Start Screen overlay (auto-hidden during ?autotest=1 or ?test=house)
+      const startOverlay = document.getElementById("start-overlay");
+      const urlParamsInit = new URLSearchParams(window.location.search);
+      if (urlParamsInit.get("autotest") === "1" || urlParamsInit.get("test") === "house") {
+        startOverlay.style.display = "none";
+      }
+      document.getElementById("start-play-btn").addEventListener("click", () => {
+        startOverlay.style.display = "none";
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        playChime();
+      });
+
+      // Clean moonlit night sky + Giant 3D Framed Poster on the Lab wall
+      scene.background = new THREE.Color(0x0f172a);
+      const pendingSprites = [];
+      let loadedGuysImage = null;
+
+      const posterTex = new THREE.TextureLoader().load("./guys.png", (tex) => {
+        loadedGuysImage = tex.image;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.needsUpdate = true;
+        // Apply crisp cropped CanvasTexture to every queued monster sprite!
+        for (const item of pendingSprites) applyCroppedCanvasTexture(item);
+      });
+      posterTex.colorSpace = THREE.SRGBColorSpace;
+
+      const posterMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(4.2, 5.6),
+        new THREE.MeshBasicMaterial({ map: posterTex })
+      );
+      posterMesh.position.set(0, 2.7, -25.6);
+      scene.add(posterMesh);
+
+      function applyCroppedCanvasTexture({ sprite, xFrac, yFrac, wFrac, hFrac }) {
+        if (!loadedGuysImage) return;
+        const iw = loadedGuysImage.width;
+        const ih = loadedGuysImage.height;
+        const cw = 320, ch = 360;
+        const cv = document.createElement("canvas");
+        cv.width = cw;
+        cv.height = ch;
+        const ctx = cv.getContext("2d");
+        // Rounded glowing frame cutout so each realistic monster pops cleanly in 3D!
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(6, 6, cw - 12, ch - 12, 28);
+        ctx.clip();
+        ctx.drawImage(
+          loadedGuysImage,
+          xFrac * iw, yFrac * ih, wFrac * iw, hFrac * ih,
+          0, 0, cw, ch
+        );
+        ctx.restore();
+        ctx.strokeStyle = "#facc15";
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.roundRect(6, 6, cw - 12, ch - 12, 28);
+        ctx.stroke();
+
+        const cTex = new THREE.CanvasTexture(cv);
+        cTex.colorSpace = THREE.SRGBColorSpace;
+        cTex.needsUpdate = true;
+        sprite.material.map = cTex;
+        sprite.material.needsUpdate = true;
+      }
+
+      // Attach a cropped realistic PNG 3D Sprite from guys.png (top-down image fractions!)
+      function attachRealisticSprite(monsterRoot, xFrac, yFrac, wFrac, hFrac, scaleW, scaleH, yPos = 1.6) {
+        if (!monsterRoot) return;
+        const mat = new THREE.SpriteMaterial({ transparent: true });
+        const sprite = new THREE.Sprite(mat);
+        sprite.name = monsterRoot.name + "_RealisticPNG";
+        sprite.scale.set(scaleW, scaleH, 1);
+        sprite.position.set(0, yPos, 0);
+        // Hide old blocky meshes inside monsterRoot so ONLY the realistic PNG shows!
+        monsterRoot.traverse((ch) => {
+          if (ch.isMesh) ch.visible = false;
+        });
+        monsterRoot.add(sprite);
+        const entry = { sprite, xFrac, yFrac, wFrac, hFrac };
+        pendingSprites.push(entry);
+        if (loadedGuysImage) applyCroppedCanvasTexture(entry);
+      }
 
       const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 250);
       camera.position.set(0, 5, 7);
@@ -308,6 +432,35 @@
         }
       });
 
+      let battleMode = false;
+      let battleEnemies = []; // { obj, label, hp }
+
+      function startOutsideBattle() {
+        if (!player) return;
+        battleMode = true;
+        battleEnemies = [];
+        const pool = [
+          { obj: clown, label: "🤡 Clown" },
+          { obj: laserGuy, label: "🤖 Laser Guy" },
+          { obj: slimeGuy, label: "🟢 Slime Guy" },
+          { obj: shadowGuy, label: "👻 Shadow Guy" },
+          { obj: ghostGuy, label: "👻💨 Ghost" },
+        ];
+        pool.forEach((p, idx) => {
+          if (p.obj) {
+            p.obj.visible = true;
+            p.obj.position.set(-10 + idx * 5, 0, 14 + (idx % 2) * 5);
+            battleEnemies.push({ obj: p.obj, label: p.label, hp: 3 });
+          }
+        });
+        player.position.set(0, 0, 8);
+        onLoft = false;
+        playChime();
+        objectiveEl.textContent = "⚔️ BATTLE MODE! The monsters came outside! Press Q to blast them with your Crazy Weapons!";
+      }
+
+      document.getElementById("battle-btn").addEventListener("click", startOutsideBattle);
+
       function fireWeaponAttack() {
         if (!player || weaponTier === 0) {
           objectiveEl.textContent = "🛒 Buy a Crazy Weapon first in the top-right shop, then press Q to attack!";
@@ -319,10 +472,36 @@
         attackRing.material.color.setHex(weaponTier === 1 ? 0x38bdf8 : weaponTier === 2 ? 0xf97316 : 0xc084fc);
         attackRing.visible = true;
         playTone(weaponTier === 1 ? 520 : weaponTier === 2 ? 260 : 780, 0.25, "sawtooth", 0.2);
-        objectiveEl.textContent = `💥 Fired ${weaponNames[weaponTier]}! Nearby monsters are STUNNED!`;
+
+        if (battleMode && battleEnemies.length > 0) {
+          let hits = 0;
+          for (const e of battleEnemies) {
+            if (e.hp <= 0) continue;
+            const d = Math.hypot(player.position.x - e.obj.position.x, player.position.z - e.obj.position.z);
+            if (d < 9.5) {
+              e.hp -= weaponTier;
+              hits++;
+              if (e.hp <= 0) {
+                e.obj.visible = false;
+                money += 25;
+                updateHudStats();
+              }
+            }
+          }
+          const alive = battleEnemies.filter((e) => e.hp > 0).length;
+          if (alive === 0) {
+            battleMode = false;
+            playChime();
+            objectiveEl.textContent = "🏆 YOU DEFEATED ALL THE MONSTERS OUTSIDE! (+$25 each!)";
+          } else {
+            objectiveEl.textContent = `💥 Hit ${hits} monster(s) with ${weaponNames[weaponTier]}! ${alive} left!`;
+          }
+        } else {
+          objectiveEl.textContent = `💥 Fired ${weaponNames[weaponTier]}! Nearby monsters are STUNNED!`;
+        }
       }
 
-      // Animate EVERY monster's arms, legs, wings, and tails!
+      // Animate EVERY monster's arms, legs, wings, tails, AND Magical Eyeball's spinning rings & magic dust!
       function animateMonsterLimbs(root, t) {
         if (!root || !root.visible) return;
         const swing = Math.sin(t * 10) * 0.45;
@@ -338,6 +517,13 @@
             child.rotation.z = -Math.sin(t * 14) * 0.6;
           } else if (n.includes("Tail")) {
             child.rotation.z = Math.sin(t * 8) * 0.35;
+          } else if (n === "Eye_MagicRing_1") {
+            child.rotation.z = t * 2.5;
+          } else if (n === "Eye_MagicRing_2") {
+            child.rotation.y = -t * 3.0;
+          } else if (n.startsWith("Eye_MagicDust_")) {
+            const sc = 0.7 + Math.sin(t * 6 + child.id) * 0.45;
+            child.scale.setScalar(sc);
           }
         });
       }
@@ -429,8 +615,10 @@
         mapCtx.stroke();
       }
 
-      // Web Audio API Sound Effects
+      // Rich Web Audio API Sound Effects ("a lot of noise!")
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      let ambientSoundTimer = 0;
+
       function playTone(freq, duration, type = "sine", vol = 0.14) {
         if (audioCtx.state === "suspended") audioCtx.resume();
         const osc = audioCtx.createOscillator();
@@ -444,13 +632,48 @@
         osc.start();
         osc.stop(audioCtx.currentTime + duration);
       }
+      function playNoiseBurst(duration = 0.15, vol = 0.12) {
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        const bufferSize = Math.floor(audioCtx.sampleRate * duration);
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+        const src = audioCtx.createBufferSource();
+        src.buffer = buffer;
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        src.connect(gain);
+        gain.connect(audioCtx.destination);
+        src.start();
+      }
+      function playSpookyForestNoise() {
+        const pick = Math.floor(Math.random() * 4);
+        if (pick === 0) {
+          // Spooky ghost woo-ooo
+          playTone(340, 0.45, "sine", 0.08);
+          setTimeout(() => playTone(280, 0.55, "sine", 0.07), 220);
+        } else if (pick === 1) {
+          // Creaky floorboard / tree branch
+          playTone(130, 0.22, "sawtooth", 0.06);
+          setTimeout(() => playTone(105, 0.28, "sawtooth", 0.05), 140);
+        } else if (pick === 2) {
+          // Distant monster growl / wind whoosh
+          playNoiseBurst(0.35, 0.08);
+          playTone(75, 0.4, "triangle", 0.09);
+        } else {
+          // Clown honk / eerie ping
+          playTone(580, 0.12, "square", 0.06);
+          setTimeout(() => playTone(460, 0.16, "square", 0.06), 130);
+        }
+      }
       function playFootstep() {
-        playTone(95 + Math.random() * 25, 0.06, "triangle", 0.07);
+        playTone(95 + Math.random() * 25, 0.06, "triangle", 0.09);
+        playNoiseBurst(0.04, 0.04);
       }
       function playChime() {
-        playTone(523.25, 0.14, "triangle", 0.16);
-        setTimeout(() => playTone(659.25, 0.14, "triangle", 0.16), 120);
-        setTimeout(() => playTone(783.99, 0.25, "triangle", 0.18), 240);
+        playTone(523.25, 0.14, "triangle", 0.18);
+        setTimeout(() => playTone(659.25, 0.14, "triangle", 0.18), 120);
+        setTimeout(() => playTone(783.99, 0.25, "triangle", 0.20), 240);
       }
 
       // Load Blender scene.glb (cache-busted so newest Blender export always loads!)
@@ -495,6 +718,16 @@
             const c = gltf.scene.getObjectByName(`House_Cage_Base_${bdef.cageIdx}`);
             bdef.cagePos = c ? c.position.clone() : new THREE.Vector3(-10, 0, 30.8);
           }
+
+          // Upgrade all 7 Poster Monsters in-game to display their crisp realistic PNG art from guys.png!
+          // (xFrac, yFrac from TOP-LEFT of guys.png!)
+          attachRealisticSprite(clown, 0.56, 0.30, 0.38, 0.32, 3.0, 3.4, 1.7);
+          attachRealisticSprite(laserGuy, 0.14, 0.31, 0.32, 0.32, 3.0, 3.4, 1.7);
+          attachRealisticSprite(slimeGuy, 0.03, 0.56, 0.36, 0.32, 2.8, 3.0, 1.5);
+          attachRealisticSprite(gltf.scene.getObjectByName("Monster_Eyeball"), 0.62, 0.08, 0.30, 0.24, 2.6, 2.6, 1.8);
+          attachRealisticSprite(gltf.scene.getObjectByName("Monster_RainbowSnake"), 0.62, 0.56, 0.36, 0.32, 3.0, 3.0, 1.5);
+          attachRealisticSprite(gltf.scene.getObjectByName("Monster_FlyingPumpkin"), 0.10, 0.08, 0.42, 0.22, 3.2, 2.4, 2.0);
+          attachRealisticSprite(gltf.scene.getObjectByName("Monster_BoneBreaker"), 0.30, 0.28, 0.38, 0.60, 2.8, 3.8, 1.9);
 
           podCap0 = gltf.scene.getObjectByName("Pod_Cap_0");
           craftTableObj = gltf.scene.getObjectByName("Cabin_Crafting_Table");
@@ -721,15 +954,20 @@
       function handleAction() {
         if (!player) return;
 
-        // 0. Climb UP or DOWN the Lab Ladder to the 2nd-Floor Loft Cages!
+        // 0. Climb UP or DOWN the Lab Ladder to the 2nd-Floor Loft Cages (carried monsters climb with you!)
         const distLadder = Math.hypot(player.position.x - ladderPos.x, player.position.z - ladderPos.z);
         if (distLadder < 3.0) {
           onLoft = !onLoft;
           player.position.y = onLoft ? 4.2 : 0.0;
           player.position.z = onLoft ? -23.5 : -21.2;
+          // Bring any captured monster up/down the ladder with you!
+          const info = getActiveTargetInfo();
+          if (info && info.isCaptured && info.monsterObj) {
+            info.monsterObj.position.set(player.position.x, player.position.y, player.position.z);
+          }
           playChime();
           objectiveEl.textContent = onLoft
-            ? "🪜 Climbed UP the Ladder to the 2nd-Floor Loft Cages!"
+            ? "🪜 Climbed UP the Ladder to the 3 Loft Cages (Werewolf, Mummy & Ghost)!"
             : "🪜 Climbed DOWN the Ladder back to the Lab floor!";
           return;
         }
@@ -1089,6 +1327,13 @@
         animateMonsterLimbs(shadowGuy, animT);
         for (const d of labMonsterDefs) animateMonsterLimbs(d.obj, animT);
         for (const b of houseBossDefs) animateMonsterLimbs(b.obj, animT);
+
+        // Play spooky ambient noises every few seconds!
+        ambientSoundTimer += dt;
+        if (ambientSoundTimer > 4.5) {
+          ambientSoundTimer = 0;
+          if (audioCtx.state === "running") playSpookyForestNoise();
+        }
 
         drawMinimap();
         renderer.render(scene, camera);
@@ -1648,6 +1893,13 @@
         animateMonsterLimbs(shadowGuy, animT);
         for (const d of labMonsterDefs) animateMonsterLimbs(d.obj, animT);
         for (const b of houseBossDefs) animateMonsterLimbs(b.obj, animT);
+
+        // Play spooky ambient noises every few seconds!
+        ambientSoundTimer += dt;
+        if (ambientSoundTimer > 4.5) {
+          ambientSoundTimer = 0;
+          if (audioCtx.state === "running") playSpookyForestNoise();
+        }
 
         drawMinimap();
         renderer.render(scene, camera);
