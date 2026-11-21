@@ -93,5 +93,6 @@ test.describe("The Game — 3D Collision & Movement Tests", () => {
     await expect(badge).toContainText("Hero & Monster Health + Defeat-Before-Capture + Help + Enemy Weapons");
     await expect(badge).toContainText("Physics: Caged Bad Guy Verified Inside Cage Bounds");
     await expect(badge).toContainText("Physics: Cage Cap Sealed on Top of Occupied Cage");
+    await expect(badge).toContainText("Performance Budget");
   });
 });
