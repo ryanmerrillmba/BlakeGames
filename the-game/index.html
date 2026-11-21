@@ -763,7 +763,7 @@
           m.position.set(lx, isFly ? 1.5 : 0.0, lz);
           faceMonsterForward(m, 0 - lx, -9.5 - lz);
         });
-        player.position.set(0.0, 0.0, -9.5);
+        player.position.set(0.0, 0.0, -7.2);
         player.rotation.y = 0;
         onLoft = false;
         if (badGuysModal) badGuysModal.style.display = "none";
@@ -808,7 +808,7 @@
           // Put Vampire front-and-center right in front of Blake!
           const v = getMonsterByKey("Monster_Vampire");
           if (v && player) {
-            v.position.set(0.0, 0.0, -12.6);
+            v.position.set(0.0, 0.0, -10.8);
             faceMonsterForward(v, player.position.x - v.position.x, player.position.z - v.position.z);
             objectiveEl.textContent = "🧛 Vampire is front-and-center in the Lab with ALL 21 bad guys!";
           }
