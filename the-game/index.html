@@ -964,6 +964,177 @@
         setTimeout(() => playTone(783.99, 0.25, "triangle", 0.20), 240);
       }
 
+      // =========================================================================
+      // TACTILE COLLISION, ACTION, FLASHLIGHT SPOT & 21 UNIQUE MONSTER SFX!
+      // =========================================================================
+      let lastBumpSfxTime = 0;
+      const monsterSfxCooldown = new Map();
+      let isRunningAutoTest = false;
+
+      function playSweep(fStart, fEnd, dur, type = "sine", vol = 0.14) {
+        if (isRunningAutoTest) return;
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(Math.max(20, fStart), now);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(20, fEnd), now + dur);
+        gain.gain.setValueAtTime(vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + dur);
+      }
+
+      function playWallBump() {
+        // Low solid wall thud
+        playSweep(115, 48, 0.11, "triangle", 0.22);
+        playNoiseBurst(0.05, 0.08);
+      }
+      function playTreeBump() {
+        // Hollow wooden trunk knock + tiny leaf rustle
+        playSweep(190, 95, 0.09, "triangle", 0.18);
+        setTimeout(() => playNoiseBurst(0.07, 0.06), 25);
+      }
+      function playObjectBump(objName = "") {
+        if (objName.includes("Pod_") || objName.includes("Cage_")) {
+          // Glassy/metallic containment pod clink
+          playSweep(760, 420, 0.10, "sine", 0.14);
+          playSweep(240, 120, 0.08, "triangle", 0.12);
+        } else if (objName.includes("Rock")) {
+          // Hard stone bump
+          playSweep(160, 75, 0.09, "square", 0.10);
+          playNoiseBurst(0.04, 0.09);
+        } else {
+          // Wooden table / crate / desk tap
+          playSweep(260, 130, 0.08, "triangle", 0.16);
+        }
+      }
+      function playTreeChop() {
+        // Crisp axe WHACK + timber crack!
+        playNoiseBurst(0.08, 0.22);
+        playSweep(280, 90, 0.13, "sawtooth", 0.18);
+        setTimeout(() => playSweep(165, 65, 0.14, "triangle", 0.15), 75);
+      }
+      function playRockMine() {
+        // Metallic pickaxe CLINK + stone crumble!
+        playSweep(1480, 920, 0.09, "triangle", 0.18);
+        playSweep(980, 620, 0.11, "sine", 0.12);
+        setTimeout(() => playNoiseBurst(0.11, 0.14), 45);
+      }
+      function playDoorCreak(isOpen) {
+        // Short spooky door creak + latch click
+        playSweep(isOpen ? 210 : 320, isOpen ? 360 : 170, 0.16, "sawtooth", 0.09);
+        setTimeout(() => playNoiseBurst(0.04, 0.12), 110);
+      }
+      function playFlashlightSpot(monsterKey) {
+        // Super-short (0.16s) dramatic flashlight discovery shimmer + monster's own short sound!
+        playSweep(680, 1180, 0.14, "sine", 0.11);
+        setTimeout(() => playMonsterSFX(monsterKey), 70);
+      }
+
+      // Really short (0.12s-0.30s) unique signature sound effect for EVERY SINGLE MONSTER!
+      const MONSTER_SFX_KEYS = [
+        "Monster_Clown", "Monster_LaserGuy", "Monster_SlimeGuy",
+        "Monster_Vampire", "Monster_Witch", "Monster_Pumpkin", "Monster_Cat",
+        "Monster_Bat", "Monster_Spider", "Monster_Skeleton", "Monster_Eyeball",
+        "Monster_Robot", "Monster_Frankenstein", "Monster_Zombie", "Monster_Werewolf",
+        "Monster_Mummy", "Monster_ShadowGuy", "Monster_Ghost",
+        "Monster_RainbowSnake", "Monster_FlyingPumpkin", "Monster_BoneBreaker"
+      ];
+
+      function playMonsterSFX(key) {
+        if (isRunningAutoTest || !key) return;
+        switch (key) {
+          case "Monster_Clown": // Mischievous clown honk!
+            playSweep(520, 440, 0.10, "square", 0.11);
+            setTimeout(() => playSweep(410, 360, 0.11, "square", 0.10), 95);
+            break;
+          case "Monster_LaserGuy": // Sci-fi laser pew!
+            playSweep(1350, 240, 0.14, "sawtooth", 0.13);
+            break;
+          case "Monster_SlimeGuy": // Wet gelatinous bloop-squish!
+            playSweep(190, 560, 0.11, "sine", 0.16);
+            setTimeout(() => playSweep(420, 210, 0.09, "sine", 0.12), 80);
+            break;
+          case "Monster_Vampire": // Eerie hiss + dark organ stab
+            playNoiseBurst(0.14, 0.10);
+            playSweep(220, 146, 0.18, "sawtooth", 0.09);
+            break;
+          case "Monster_Witch": // Sparkling cackle chime!
+            playSweep(740, 1120, 0.09, "triangle", 0.13);
+            setTimeout(() => playSweep(980, 620, 0.11, "triangle", 0.12), 85);
+            break;
+          case "Monster_Pumpkin": // Hollow wooden fire pop!
+            playSweep(240, 120, 0.12, "triangle", 0.16);
+            playNoiseBurst(0.10, 0.10);
+            break;
+          case "Monster_Cat": // Spooky feline mrrrow!
+            playSweep(580, 880, 0.09, "triangle", 0.12);
+            setTimeout(() => playSweep(880, 460, 0.13, "triangle", 0.11), 85);
+            break;
+          case "Monster_Bat": // High ultrasonic squeak!
+            playSweep(1850, 1150, 0.07, "sine", 0.11);
+            setTimeout(() => playSweep(1980, 1280, 0.07, "sine", 0.09), 75);
+            break;
+          case "Monster_Spider": // 4 rapid arachnid chitter clicks!
+            for (let i = 0; i < 4; i++) {
+              setTimeout(() => playSweep(950 - i * 90, 420, 0.035, "square", 0.08), i * 38);
+            }
+            break;
+          case "Monster_Skeleton": // Dry bone clack-clatter!
+            playSweep(860, 320, 0.05, "triangle", 0.15);
+            setTimeout(() => playSweep(720, 260, 0.06, "triangle", 0.13), 65);
+            break;
+          case "Monster_Eyeball": // Mystical crystal shimmer!
+            playSweep(920, 1420, 0.16, "sine", 0.12);
+            setTimeout(() => playSweep(1320, 1760, 0.12, "triangle", 0.09), 60);
+            break;
+          case "Monster_Robot": // Electric robotic bzzt-beep!
+            playSweep(420, 840, 0.06, "square", 0.10);
+            setTimeout(() => playSweep(960, 520, 0.08, "sawtooth", 0.10), 65);
+            break;
+          case "Monster_Frankenstein": // Heavy low bolt-hum grunt!
+            playSweep(92, 62, 0.22, "sawtooth", 0.14);
+            break;
+          case "Monster_Zombie": // Low shambling groan!
+            playSweep(145, 95, 0.22, "sawtooth", 0.11);
+            break;
+          case "Monster_Werewolf": // Sharp wolf snarl-bark!
+            playNoiseBurst(0.11, 0.14);
+            playSweep(280, 115, 0.15, "sawtooth", 0.14);
+            break;
+          case "Monster_Mummy": // Dusty cloth whoosh-hiss!
+            playNoiseBurst(0.18, 0.11);
+            playSweep(320, 180, 0.14, "sine", 0.08);
+            break;
+          case "Monster_ShadowGuy": // Shadowy whisper-whoosh!
+            playNoiseBurst(0.16, 0.11);
+            playSweep(180, 420, 0.18, "sine", 0.10);
+            break;
+          case "Monster_Ghost": // Classic spooky ooo-ooo warble!
+            playSweep(460, 580, 0.11, "sine", 0.12);
+            setTimeout(() => playSweep(580, 390, 0.14, "sine", 0.11), 100);
+            break;
+          case "Monster_RainbowSnake": // Sparkly hiss + rainbow chime!
+            playNoiseBurst(0.13, 0.10);
+            playSweep(880, 1520, 0.14, "triangle", 0.11);
+            break;
+          case "Monster_FlyingPumpkin": // Fiery wing whoosh + crackle!
+            playNoiseBurst(0.15, 0.15);
+            playSweep(340, 140, 0.16, "sawtooth", 0.12);
+            break;
+          case "Monster_BoneBreaker": // Heavy iron warhammer CLANG!
+            playSweep(480, 120, 0.18, "sawtooth", 0.16);
+            playSweep(110, 45, 0.20, "triangle", 0.18);
+            break;
+          default:
+            playSweep(380, 240, 0.12, "triangle", 0.11);
+        }
+      }
+
       // Load Blender scene.glb (cache-busted so newest Blender export always loads!)
       const loader = new GLTFLoader();
       loader.load(
@@ -1114,6 +1285,7 @@
           // Built-in automated collision & house test suite when ?autotest=1 or ?test=house
           const params = new URLSearchParams(window.location.search);
           if (params.get("autotest") === "1" || params.get("test") === "house") {
+            isRunningAutoTest = true;
             const results = [];
             const origX = player.position.x, origZ = player.position.z, origRot = player.rotation.y;
 
@@ -1184,6 +1356,8 @@
             }).length;
             results.push({ name: `Lifelike Articulated Monster Rigs (${riggedCount}/${allMonstersForTest.length})`, pass: riggedCount === allMonstersForTest.length && riggedCount >= 18 });
             results.push({ name: "Stereo Background Music (Spooky + Boss Crossfade)", pass: Boolean(musicSpooky && musicBoss && musicBtn) });
+            results.push({ name: `Collision, Flashlight & ${MONSTER_SFX_KEYS.length} Monster SFX`, pass: Boolean(typeof playWallBump === "function" && typeof playTreeChop === "function" && typeof playFlashlightSpot === "function" && MONSTER_SFX_KEYS.length === 21) });
+            isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
             if (new URLSearchParams(window.location.search).get("test") === "house") {
@@ -1491,7 +1665,11 @@
             }
             money += 2;
             updateHudStats();
-            playTone(140, 0.14, "sawtooth", 0.18);
+            if (choppable.category === "tree") {
+              playTreeChop();
+            } else {
+              playRockMine();
+            }
             objectiveEl.textContent = choppable.category === "tree"
               ? "🪓 Chopped a Tree! (+1 🪵 Wood, +$2)"
               : "⛏️ Mined a Rock! (+1 🪨 Stone, +$2)";
@@ -1526,7 +1704,7 @@
         composer.setSize(window.innerWidth, window.innerHeight);
       });
 
-      function collidesAt(x, z) {
+      function getCollisionAt(x, z) {
         for (let i = 0; i < colliders.length; i++) {
           if (!colliders[i].active) continue;
           const b = colliders[i].box;
@@ -1536,10 +1714,20 @@
             z + PLAYER_RADIUS > b.min.z &&
             z - PLAYER_RADIUS < b.max.z
           ) {
-            return true;
+            return colliders[i];
           }
         }
-        return false;
+        return null;
+      }
+
+      function triggerCollisionBumpSFX(hit) {
+        if (!hit || isRunningAutoTest) return;
+        const now = performance.now();
+        if (now - lastBumpSfxTime < 280) return;
+        lastBumpSfxTime = now;
+        if (hit.category === "wall") playWallBump();
+        else if (hit.category === "tree") playTreeBump();
+        else playObjectBump(hit.name);
       }
 
       function toggleNearestDoor() {
@@ -1558,7 +1746,7 @@
         if (best) {
           best.isOpen = !best.isOpen;
           best.obj.rotation.y = best.isOpen ? best.openAngle : best.closedAngle;
-          playTone(best.isOpen ? 320 : 180, 0.12, "square", 0.12);
+          playDoorCreak(best.isOpen);
           return true;
         }
         return false;
@@ -1596,12 +1784,18 @@
         const maxX = player.position.z > 4.0 ? 95.0 : 11.3;
 
         const nextX = THREE.MathUtils.clamp(player.position.x + nx * speed * dt, -maxX, maxX);
-        if (!collidesAt(nextX, player.position.z)) {
+        const hitX = getCollisionAt(nextX, player.position.z);
+        if (!hitX) {
           player.position.x = nextX;
+        } else {
+          triggerCollisionBumpSFX(hitX);
         }
         const nextZ = THREE.MathUtils.clamp(player.position.z + nz * speed * dt, -25.3, maxZ);
-        if (!collidesAt(player.position.x, nextZ)) {
+        const hitZ = getCollisionAt(player.position.x, nextZ);
+        if (!hitZ) {
           player.position.z = nextZ;
+        } else {
+          triggerCollisionBumpSFX(hitZ);
         }
       }
 
@@ -2169,6 +2363,29 @@
         if (fireflies) {
           fireflies.position.y = Math.sin(clock.elapsedTime * 0.9) * 0.45;
           fireflies.rotation.y = Math.sin(clock.elapsedTime * 0.15) * 0.04;
+        }
+
+        // Flashlight beam spotting & proximity monster signature SFX!
+        const nowMs = performance.now();
+        const allActiveMonsters = [clown, laserGuy, slimeGuy, shadowGuy, ghostGuy, ...labMonsterDefs.map((d) => d.obj), ...houseBossDefs.map((b) => b.obj)];
+        for (const mObj of allActiveMonsters) {
+          if (!mObj || !mObj.visible) continue;
+          const mdx = mObj.position.x - player.position.x;
+          const mdz = mObj.position.z - player.position.z;
+          const mDist = Math.hypot(mdx, mdz);
+          const lastSfx = monsterSfxCooldown.get(mObj.name) || 0;
+          if (mDist > 0.5 && mDist < 13.5 && nowMs - lastSfx > 5200) {
+            const dot = (mdx / mDist) * forwardX + (mdz / mDist) * forwardZ;
+            if (dot > 0.87) {
+              // Flashlight beam just hit this bad guy / boss!
+              monsterSfxCooldown.set(mObj.name, nowMs);
+              playFlashlightSpot(mObj.name);
+            } else if (mDist < 3.0) {
+              // Walked right up next to this monster (or visited it in its cage)!
+              monsterSfxCooldown.set(mObj.name, nowMs);
+              playMonsterSFX(mObj.name);
+            }
+          }
         }
 
         // Smooth dynamic music crossfade (Spooky Theme <-> Boss Battle Theme!)
