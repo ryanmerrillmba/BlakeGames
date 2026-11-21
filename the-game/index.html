@@ -193,14 +193,14 @@
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.18;
+      renderer.toneMappingExposure = 1.02;
       document.body.appendChild(renderer.domElement);
 
       // 10x Real-Time PBR Reflections: PMREM RoomEnvironment IBL for metallic armor, clearcoat slime & glossy eyes!
       const pmremGenerator = new THREE.PMREMGenerator(renderer);
       const envTexture = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
       scene.environment = envTexture;
-      scene.environmentIntensity = 0.72;
+      scene.environmentIntensity = 0.28;
       pmremGenerator.dispose();
 
       // Post-Processing Bloom Composer (cinematic glow matching all_guys.png!)
@@ -208,9 +208,9 @@
       composer.addPass(new RenderPass(scene, camera));
       const bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        0.42, // strength
-        0.65, // radius
-        0.72  // threshold
+        0.35, // strength
+        0.55, // radius
+        0.88  // threshold (only true emissive eyes/portals/lasers bloom!)
       );
       composer.addPass(bloomPass);
       const bloomEnabled = true;
