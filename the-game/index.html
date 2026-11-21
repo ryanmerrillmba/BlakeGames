@@ -169,6 +169,14 @@
 
     <button id="action-prompt" type="button">Action</button>
 
+    <!-- Live Bad Guy Zone Portrait Card (shows picture of the bad guy when you enter their zone!) -->
+    <div id="zone-card" style="display:none;position:fixed;top:140px;left:16px;z-index:24;background:rgba(15,23,42,0.92);border:2px solid #ef4444;border-radius:14px;padding:10px;width:168px;text-align:center;box-shadow:0 0 24px rgba(239,68,68,0.55);pointer-events:none;">
+      <div style="font-size:0.72rem;font-weight:900;color:#fca5a5;letter-spacing:0.6px;margin-bottom:6px;">⚠️ BAD GUY ZONE</div>
+      <canvas id="zone-canvas" width="144" height="144" style="border-radius:10px;border:2px solid #facc15;display:block;margin:0 auto;background:#020617;"></canvas>
+      <div id="zone-name" style="margin-top:6px;font-size:0.95rem;font-weight:900;color:#fde047;">🤡 Clown</div>
+      <div id="zone-dist" style="font-size:0.74rem;color:#cbd5e1;margin-top:2px;">Nearby!</div>
+    </div>
+
     <!-- Pressable Bad Guys Bar (shows all 21 bad guys & what they look like!) -->
     <button id="badguys-bar" type="button" style="position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:25;background:linear-gradient(90deg,#7c3aed,#ef4444,#f59e0b);color:#ffffff;border:2px solid #fef08a;border-radius:999px;padding:10px 26px;font-size:1.05rem;font-weight:900;letter-spacing:0.4px;cursor:pointer;box-shadow:0 0 22px rgba(239,68,68,0.65);pointer-events:auto;">
       👾 Press Here — See All 21 Bad Guys!
@@ -822,6 +830,60 @@
         });
       }
 
+      // Live Bad Guy Zone Portrait Renderer (crops each bad guy from guys.png / clown.png!)
+      const zoneCardEl = document.getElementById("zone-card");
+      const zoneCanvasEl = document.getElementById("zone-canvas");
+      const zoneCtx = zoneCanvasEl ? zoneCanvasEl.getContext("2d") : null;
+      const zoneNameEl = document.getElementById("zone-name");
+      const zoneDistEl = document.getElementById("zone-dist");
+      let currentZoneKey = null;
+
+      const clownImg = new Image();
+      clownImg.src = "./clown.png";
+
+      // Approximate portrait crop regions on guys.png (and clown.png for Clown!)
+      const ZONE_CROPS = {
+        Monster_Clown: { useClown: true },
+        Monster_LaserGuy: { x: 0.04, y: 0.06, w: 0.28, h: 0.34 },
+        Monster_SlimeGuy: { x: 0.34, y: 0.06, w: 0.28, h: 0.34 },
+        Monster_Vampire: { x: 0.66, y: 0.06, w: 0.28, h: 0.34 },
+        Monster_Witch: { x: 0.04, y: 0.36, w: 0.28, h: 0.34 },
+        Monster_Pumpkin: { x: 0.34, y: 0.36, w: 0.28, h: 0.34 },
+        Monster_Cat: { x: 0.66, y: 0.36, w: 0.28, h: 0.34 },
+        Monster_Bat: { x: 0.04, y: 0.64, w: 0.28, h: 0.34 },
+        Monster_Spider: { x: 0.34, y: 0.64, w: 0.28, h: 0.34 },
+        Monster_Skeleton: { x: 0.66, y: 0.64, w: 0.28, h: 0.34 },
+        Monster_Eyeball: { x: 0.20, y: 0.20, w: 0.30, h: 0.34 },
+        Monster_Robot: { x: 0.50, y: 0.20, w: 0.30, h: 0.34 },
+        Monster_Frankenstein: { x: 0.18, y: 0.50, w: 0.30, h: 0.34 },
+        Monster_Zombie: { x: 0.48, y: 0.50, w: 0.30, h: 0.34 },
+        Monster_Werewolf: { x: 0.34, y: 0.22, w: 0.32, h: 0.36 },
+        Monster_Mummy: { x: 0.62, y: 0.48, w: 0.30, h: 0.34 },
+        Monster_ShadowGuy: { x: 0.08, y: 0.48, w: 0.30, h: 0.34 },
+        Monster_Ghost: { x: 0.62, y: 0.18, w: 0.30, h: 0.34 },
+        Monster_RainbowSnake: { x: 0.32, y: 0.52, w: 0.36, h: 0.36 },
+        Monster_FlyingPumpkin: { x: 0.34, y: 0.34, w: 0.32, h: 0.34 },
+        Monster_BoneBreaker: { x: 0.54, y: 0.54, w: 0.36, h: 0.36 }
+      };
+
+      function drawZonePortrait(key) {
+        if (!zoneCtx || !zoneCanvasEl) return;
+        const w = zoneCanvasEl.width, h = zoneCanvasEl.height;
+        zoneCtx.clearRect(0, 0, w, h);
+        zoneCtx.fillStyle = "#020617";
+        zoneCtx.fillRect(0, 0, w, h);
+        const crop = ZONE_CROPS[key] || { x: 0.2, y: 0.2, w: 0.6, h: 0.6 };
+        if (crop.useClown && clownImg.complete && clownImg.naturalWidth > 0) {
+          zoneCtx.drawImage(clownImg, 0, 0, clownImg.naturalWidth, clownImg.naturalHeight, 0, 0, w, h);
+        } else if (loadedGuysImage && loadedGuysImage.width > 0) {
+          const iw = loadedGuysImage.width, ih = loadedGuysImage.height;
+          zoneCtx.drawImage(loadedGuysImage, crop.x * iw, crop.y * ih, crop.w * iw, crop.h * ih, 0, 0, w, h);
+        }
+      }
+
+      const labPodLights = []; // { light, podIdx, baseIntensity }
+
+      // Bad Guys Gallery Modal Handlers
       if (badGuysBar && badGuysModal) {
         badGuysBar.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -1505,7 +1567,15 @@
           const podColors = [0x38bdf8, 0xa855f7, 0x4ade80, 0xf59e0b];
           for (let i = 0; i < 14; i++) {
             const pObj = gltf.scene.getObjectByName(`Pod_Base_${i}`);
-            if (pObj) addThingLight(pObj.position.x, pObj.position.y + 3.2, pObj.position.z, podColors[i % podColors.length], 4.2, 7.5);
+            if (pObj) {
+              const isMagicEye = i === 10;
+              const col = isMagicEye ? 0xc084fc : podColors[i % podColors.length];
+              const pl = new THREE.PointLight(col, 0.4, isMagicEye ? 11.0 : 8.5);
+              pl.position.set(pObj.position.x, pObj.position.y + 3.0, pObj.position.z);
+              scene.add(pl);
+              thingLights.push(pl);
+              labPodLights.push({ light: pl, podIdx: i, maxIntensity: isMagicEye ? 14.0 : 7.5 });
+            }
           }
           for (let i = 0; i < 3; i++) {
             const hc = gltf.scene.getObjectByName(`House_Cage_Base_${i}`);
@@ -1649,6 +1719,9 @@
             results.push({ name: "All 21 Bad Guys Out + Bad Guys Gallery Bar", pass: Boolean(BAD_GUYS_CATALOG.length === 21 && badGuysBar && badGuysModal && allMonstersForTest.every((m) => m.visible)) });
             results.push({ name: `Dedicated Light on Every Thing (${thingLights.length} lights)`, pass: thingLights.length >= 16 });
             results.push({ name: `Every Single Bad Guy Faces Forward (${allMonstersForTest.length}/21)`, pass: Boolean(typeof faceMonsterForward === "function" && allMonstersForTest.length === 21) });
+            const hasNoHair = !gltf.scene.getObjectByName("Human_HairCap") && !gltf.scene.getObjectByName("Human_HairBang");
+            const hasCauldrons = Boolean(gltf.scene.getObjectByName("Lab_Cauldron_Rim_0") && gltf.scene.getObjectByName("Lab_Cauldron_Rim_10"));
+            results.push({ name: "Bald Hero (No Hair) + Lab Cauldrons + Bad Guy Zone Card", pass: Boolean(hasNoHair && hasCauldrons && zoneCardEl && labPodLights.length >= 10) });
             isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
@@ -2733,6 +2806,41 @@
               monsterSfxCooldown.set(mObj.name, nowMs);
               playMonsterSFX(mObj.name);
             }
+          }
+        }
+
+        // Flashlight-Activated Lab Cauldrons & Magic Eye Room Lighting!
+        const inLabWithFlashlight = player.position.z <= -4.5;
+        labLight.intensity = THREE.MathUtils.lerp(labLight.intensity, inLabWithFlashlight ? 16.0 : 1.0, Math.min(1, dt * 4.0));
+        for (const lp of labPodLights) {
+          const targetI = inLabWithFlashlight ? lp.maxIntensity : 0.35;
+          lp.light.intensity = THREE.MathUtils.lerp(lp.light.intensity, targetI, Math.min(1, dt * 4.5));
+        }
+
+        // Live Bad Guy Zone Picture Card — shows a picture of the bad guy when you're in their zone!
+        let nearestZoneMonster = null;
+        let nearestZoneDist = 11.5;
+        for (const mObj of allActiveMonsters) {
+          if (!mObj || !mObj.visible) continue;
+          const dZ = Math.hypot(mObj.position.x - player.position.x, mObj.position.z - player.position.z);
+          if (dZ < nearestZoneDist) {
+            nearestZoneDist = dZ;
+            nearestZoneMonster = mObj;
+          }
+        }
+        if (zoneCardEl) {
+          if (nearestZoneMonster) {
+            zoneCardEl.style.display = "block";
+            if (currentZoneKey !== nearestZoneMonster.name) {
+              currentZoneKey = nearestZoneMonster.name;
+              const info = BAD_GUYS_CATALOG.find((g) => g.key === currentZoneKey);
+              if (zoneNameEl) zoneNameEl.textContent = info ? `${info.emoji} ${info.name}` : currentZoneKey;
+              drawZonePortrait(currentZoneKey);
+            }
+            if (zoneDistEl) zoneDistEl.textContent = `${nearestZoneDist.toFixed(1)}m away!`;
+          } else {
+            zoneCardEl.style.display = "none";
+            currentZoneKey = null;
           }
         }
 
