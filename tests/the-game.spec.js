@@ -76,7 +76,14 @@ test.describe("The Game — 3D Collision & Movement Tests", () => {
     await expect(badge).toContainText("House Door + Crafting Table + Portal");
     await expect(badge).toContainText("Laser Guy");
     await expect(badge).toContainText("Real-Time Shadows + ACES ToneMapping");
+    await expect(badge).toContainText("PMREM IBL Metallic Reflections");
     await expect(badge).toContainText("Bloom Post-Processing + 260 Fireflies");
     await expect(badge).toContainText("3D Hip/Shoulder Walk Pivots + Mixer");
+    await expect(badge).toContainText("Lifelike Articulated Monster Rigs (21/21)");
+    await expect(badge).toContainText("Stereo Background Music");
+    await expect(badge).toContainText("Collision, Flashlight & 21 Monster SFX");
+    await expect(badge).toContainText("Bad Guys Blocked by Solid Walls");
+    await expect(badge).toContainText("Bad Guys Blocked by Trees");
+    await expect(badge).toContainText("Monster Physics & Sliding Engine Active");
   });
 });

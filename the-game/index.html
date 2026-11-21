@@ -1357,6 +1357,36 @@
             results.push({ name: `Lifelike Articulated Monster Rigs (${riggedCount}/${allMonstersForTest.length})`, pass: riggedCount === allMonstersForTest.length && riggedCount >= 18 });
             results.push({ name: "Stereo Background Music (Spooky + Boss Crossfade)", pass: Boolean(musicSpooky && musicBoss && musicBtn) });
             results.push({ name: `Collision, Flashlight & ${MONSTER_SFX_KEYS.length} Monster SFX`, pass: Boolean(typeof playWallBump === "function" && typeof playTreeChop === "function" && typeof playFlashlightSpot === "function" && MONSTER_SFX_KEYS.length === 21) });
+
+            // Monster Physics Tests: verify bad guys CANNOT run through solid walls or trees!
+            let monsterWallPass = false;
+            let monsterTreePass = false;
+            let monsterPhysicsPass = false;
+            if (clown) {
+              const mOrigX = clown.position.x, mOrigZ = clown.position.z;
+              // 1) Monster vs Solid Wall (left wall of Dark Room at x = -4.5)
+              clown.position.set(-3.6, 0, 0);
+              for (let i = 0; i < 40; i++) moveMonsterSafe(clown, -0.32, 0);
+              monsterWallPass = clown.position.x > -4.5 && clown.position.x < -3.7;
+              // 2) Monster vs Forest Tree
+              const mTree = colliders.find((c) => c.category === "tree");
+              if (mTree) {
+                const tx = (mTree.box.min.x + mTree.box.max.x) / 2;
+                const tz = (mTree.box.min.z + mTree.box.max.z) / 2;
+                clown.position.set(mTree.box.min.x - 1.2, 0, tz);
+                for (let i = 0; i < 40; i++) moveMonsterSafe(clown, 0.25, 0);
+                // Ensure monster NEVER overlaps the tree's bounding box!
+                monsterTreePass = !collidesForEntity(clown.position.x, clown.position.z, MONSTER_RADIUS);
+              }
+              // 3) Flying monster still blocked by solid walls (wallsOnly: true)
+              clown.position.set(-3.6, 0, 0);
+              for (let i = 0; i < 40; i++) moveMonsterSafe(clown, -0.32, 0, { wallsOnly: true });
+              monsterPhysicsPass = Boolean(typeof moveMonsterSafe === "function" && typeof collidesForEntity === "function" && clown.position.x > -4.5);
+              clown.position.set(mOrigX, 0, mOrigZ);
+            }
+            results.push({ name: "Bad Guys Blocked by Solid Walls", pass: monsterWallPass });
+            results.push({ name: "Bad Guys Blocked by Trees", pass: monsterTreePass });
+            results.push({ name: "Monster Physics & Sliding Engine Active", pass: monsterPhysicsPass });
             isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
@@ -1799,6 +1829,69 @@
         }
       }
 
+      // =========================================================================
+      // MONSTER PHYSICS & SOLID COLLISION ENGINE (Blocks Walls, Trees & Objects!)
+      // =========================================================================
+      const MONSTER_RADIUS = 0.36;
+
+      function collidesForEntity(x, z, radius = MONSTER_RADIUS, opts = {}) {
+        const wallsOnly = Boolean(opts.wallsOnly);
+        const ignoreCages = Boolean(opts.ignoreCages);
+        for (let i = 0; i < colliders.length; i++) {
+          const c = colliders[i];
+          if (!c.active) continue;
+          if (wallsOnly && c.category !== "wall") continue;
+          if (ignoreCages && (c.name.includes("Pod_Base_") || c.name.includes("House_Cage_Base_"))) continue;
+          const b = c.box;
+          if (
+            x + radius > b.min.x &&
+            x - radius < b.max.x &&
+            z + radius > b.min.z &&
+            z - radius < b.max.z
+          ) {
+            return c;
+          }
+        }
+        return null;
+      }
+
+      function moveMonsterSafe(monsterObj, stepX, stepZ, opts = {}) {
+        if (!monsterObj) return false;
+        const radius = opts.radius || MONSTER_RADIUS;
+        const maxZ = 195.0;
+        const maxX = monsterObj.position.z > 4.0 ? 95.0 : 11.3;
+        let moved = false;
+
+        // Axis-separated sliding collision physics (never clips through walls or trees!)
+        const candX = THREE.MathUtils.clamp(monsterObj.position.x + stepX, -maxX, maxX);
+        const hitX = collidesForEntity(candX, monsterObj.position.z, radius, opts);
+        if (!hitX) {
+          monsterObj.position.x = candX;
+          moved = true;
+        } else if (Math.abs(stepX) > 0.001 && Math.abs(stepZ) < Math.abs(stepX) * 0.5) {
+          // Gentle sidestep steering around tree trunks so chasing monsters slide around obstacles
+          const slideZ = THREE.MathUtils.clamp(monsterObj.position.z + Math.sign(stepZ || 1) * Math.abs(stepX) * 0.5, -25.3, maxZ);
+          if (!collidesForEntity(monsterObj.position.x, slideZ, radius, opts)) {
+            monsterObj.position.z = slideZ;
+            moved = true;
+          }
+        }
+
+        const candZ = THREE.MathUtils.clamp(monsterObj.position.z + stepZ, -25.3, maxZ);
+        const hitZ = collidesForEntity(monsterObj.position.x, candZ, radius, opts);
+        if (!hitZ) {
+          monsterObj.position.z = candZ;
+          moved = true;
+        } else if (Math.abs(stepZ) > 0.001 && Math.abs(stepX) < Math.abs(stepZ) * 0.5) {
+          const slideX = THREE.MathUtils.clamp(monsterObj.position.x + Math.sign(stepX || 1) * Math.abs(stepZ) * 0.5, -maxX, maxX);
+          if (!collidesForEntity(slideX, monsterObj.position.z, radius, opts)) {
+            monsterObj.position.x = slideX;
+            moved = true;
+          }
+        }
+        return moved;
+      }
+
       const clock = new THREE.Clock();
       const flashWorldPos = new THREE.Vector3();
 
@@ -1873,9 +1966,7 @@
           if (laserCaptured) {
             const tx = player.position.x - forwardX * 1.8;
             const tz = player.position.z - forwardZ * 1.8;
-            const moveDist = Math.hypot(tx - laserGuy.position.x, tz - laserGuy.position.z);
-            laserGuy.position.x += (tx - laserGuy.position.x) * 0.1;
-            laserGuy.position.z += (tz - laserGuy.position.z) * 0.1;
+            moveMonsterSafe(laserGuy, (tx - laserGuy.position.x) * 0.1, (tz - laserGuy.position.z) * 0.1);
             laserBeam.visible = false;
           } else {
             const dxL = player.position.x - laserGuy.position.x;
@@ -1918,8 +2009,7 @@
           if (slimeCaptured) {
             const tx = player.position.x - forwardX * 2.0;
             const tz = player.position.z - forwardZ * 2.0;
-            slimeGuy.position.x += (tx - slimeGuy.position.x) * 0.1;
-            slimeGuy.position.z += (tz - slimeGuy.position.z) * 0.1;
+            moveMonsterSafe(slimeGuy, (tx - slimeGuy.position.x) * 0.1, (tz - slimeGuy.position.z) * 0.1);
           } else {
             const dxS = slimeGuy.position.x - player.position.x;
             const dzS = slimeGuy.position.z - player.position.z;
@@ -1978,8 +2068,7 @@
             } else if (activeLabCaptured) {
               const tx = player.position.x - forwardX * 2.0;
               const tz = player.position.z - forwardZ * 2.0;
-              def.obj.position.x += (tx - def.obj.position.x) * 0.1;
-              def.obj.position.z += (tz - def.obj.position.z) * 0.1;
+              moveMonsterSafe(def.obj, (tx - def.obj.position.x) * 0.1, (tz - def.obj.position.z) * 0.1, { wallsOnly: def.flies });
             } else {
               const dxM = player.position.x - def.obj.position.x;
               const dzM = player.position.z - def.obj.position.z;
@@ -1990,8 +2079,7 @@
                   def.obj.position.y = Math.max(0, def.obj.position.y - 6.0 * dt);
                   objectiveEl.textContent = "🕷️ WHOA! The Spider JUMPED DOWN from the tree to get you!";
                 }
-                def.obj.position.x += (dxM / distM) * 2.4 * dt;
-                def.obj.position.z += (dzM / distM) * 2.4 * dt;
+                moveMonsterSafe(def.obj, (dxM / distM) * 2.4 * dt, (dzM / distM) * 2.4 * dt, { wallsOnly: def.flies });
                 def.obj.rotation.y = Math.atan2(dxM, dzM);
               }
               if (distM < 2.2) {
@@ -2011,15 +2099,13 @@
           if (shadowCaptured) {
             const tx = player.position.x - forwardX * 2.0;
             const tz = player.position.z - forwardZ * 2.0;
-            shadowGuy.position.x += (tx - shadowGuy.position.x) * 0.1;
-            shadowGuy.position.z += (tz - shadowGuy.position.z) * 0.1;
+            moveMonsterSafe(shadowGuy, (tx - shadowGuy.position.x) * 0.1, (tz - shadowGuy.position.z) * 0.1, { wallsOnly: true });
           } else {
             const dxSh = player.position.x - shadowGuy.position.x;
             const dzSh = player.position.z - shadowGuy.position.z;
             const distSh = Math.hypot(dxSh, dzSh);
             if (distSh < 12.0 && distSh >= 2.2) {
-              shadowGuy.position.x += (dxSh / distSh) * 3.0 * dt;
-              shadowGuy.position.z += (dzSh / distSh) * 3.0 * dt;
+              moveMonsterSafe(shadowGuy, (dxSh / distSh) * 3.0 * dt, (dzSh / distSh) * 3.0 * dt, { wallsOnly: true });
               shadowGuy.rotation.y = Math.atan2(dxSh, dzSh);
               objectiveEl.textContent = "👻 FLYING SHADOW GUY is swooping at you! Catch him for your House Cage!";
             }
@@ -2038,8 +2124,7 @@
           if (ghostCaptured) {
             const tx = player.position.x - forwardX * 2.0;
             const tz = player.position.z - forwardZ * 2.0;
-            ghostGuy.position.x += (tx - ghostGuy.position.x) * 0.1;
-            ghostGuy.position.z += (tz - ghostGuy.position.z) * 0.1;
+            moveMonsterSafe(ghostGuy, (tx - ghostGuy.position.x) * 0.1, (tz - ghostGuy.position.z) * 0.1, { wallsOnly: true });
           } else {
             const dxG = player.position.x - ghostGuy.position.x;
             const dzG = player.position.z - ghostGuy.position.z;
@@ -2083,33 +2168,23 @@
           const dzC = player.position.z - clown.position.z;
           const distC = Math.hypot(dxC, dzC);
           if (distC < 8.0 && distC >= 2.2) {
-            clown.position.x += (dxC / distC) * 2.0 * dt;
-            clown.position.z += (dzC / distC) * 2.0 * dt;
+            moveMonsterSafe(clown, (dxC / distC) * 2.0 * dt, (dzC / distC) * 2.0 * dt);
             clown.rotation.y = Math.atan2(dxC, dzC);
             objectiveEl.textContent = "🤡 BOO! The Clown is trying to scare you! Catch him!";
           }
           if (distC < 2.2) {
             clownCaptured = true;
             playChime();
+            playMonsterSFX("Monster_Clown");
             objectiveEl.textContent = "First cage! Bring the Clown back to the First cage and throw him in!";
           }
         }
 
-        // Clown follows player with moving feet (until thrown!)
+        // Clown follows player with lifelike walking & solid wall/tree collision physics!
         if (clownCaptured && !clownInCage && !throwingClown && clown) {
           const targetX = player.position.x - forwardX * 1.6;
           const targetZ = player.position.z - forwardZ * 1.6;
-          const moveDist = Math.hypot(targetX - clown.position.x, targetZ - clown.position.z);
-          clown.position.x += (targetX - clown.position.x) * 0.1;
-          clown.position.z += (targetZ - clown.position.z) * 0.1;
-          if (moveDist > 0.15) {
-            const cSwing = Math.sin(clock.elapsedTime * 12) * 0.6;
-            if (clownLegL) clownLegL.rotation.x = cSwing;
-            if (clownLegR) clownLegR.rotation.x = -cSwing;
-          } else {
-            if (clownLegL) clownLegL.rotation.x *= 0.8;
-            if (clownLegR) clownLegR.rotation.x *= 0.8;
-          }
+          moveMonsterSafe(clown, (targetX - clown.position.x) * 0.1, (targetZ - clown.position.z) * 0.1);
         }
 
         // Throwing Clown animation
@@ -2197,10 +2272,9 @@
             bdef.obj.visible = true;
             if (bdef.flies && !activeBossThrowing) {
               bdef.obj.position.y = 2.4 + Math.sin(clock.elapsedTime * 6) * 0.5;
-              // Crazy Flying Pumpkin zips around in the air!
+              // Crazy Flying Pumpkin zips around in the air (still blocked by walls!)
               if (!activeBossCaptured) {
-                bdef.obj.position.x += Math.cos(clock.elapsedTime * 2.2) * 3.5 * dt;
-                bdef.obj.position.z += Math.sin(clock.elapsedTime * 2.2) * 3.5 * dt;
+                moveMonsterSafe(bdef.obj, Math.cos(clock.elapsedTime * 2.2) * 3.5 * dt, Math.sin(clock.elapsedTime * 2.2) * 3.5 * dt, { wallsOnly: true });
               }
             }
             if (activeBossThrowing) {
@@ -2228,15 +2302,13 @@
             } else if (activeBossCaptured) {
               const tx = player.position.x - forwardX * 2.2;
               const tz = player.position.z - forwardZ * 2.2;
-              bdef.obj.position.x += (tx - bdef.obj.position.x) * 0.1;
-              bdef.obj.position.z += (tz - bdef.obj.position.z) * 0.1;
+              moveMonsterSafe(bdef.obj, (tx - bdef.obj.position.x) * 0.1, (tz - bdef.obj.position.z) * 0.1, { wallsOnly: bdef.flies });
             } else {
               const dxB = player.position.x - bdef.obj.position.x;
               const dzB = player.position.z - bdef.obj.position.z;
               const distB = Math.hypot(dxB, dzB);
               if (distB < 14.0 && distB >= 2.3) {
-                bdef.obj.position.x += (dxB / distB) * bdef.speed * dt;
-                bdef.obj.position.z += (dzB / distB) * bdef.speed * dt;
+                moveMonsterSafe(bdef.obj, (dxB / distB) * bdef.speed * dt, (dzB / distB) * bdef.speed * dt, { wallsOnly: bdef.flies });
                 bdef.obj.rotation.y = Math.atan2(dxB, dzB);
               }
               if (distB < 2.3) {
