@@ -159,6 +159,7 @@
         <strong>Move:</strong> Click/Drag Mouse, or W A S D / Arrows<br />
         <strong>Action:</strong> SPACEBAR / E &nbsp;|&nbsp; <strong>Doors:</strong> F &nbsp;|&nbsp; <strong>Attack:</strong> Q
         <div style="margin-top:6px; display:flex; gap:6px; justify-content:flex-end;">
+          <button id="music-btn" type="button" style="background:#38bdf8;color:#0f172a;border:none;border-radius:8px;padding:5px 10px;font-weight:800;cursor:pointer;">🔊 Music: ON</button>
           <button id="shop-btn" type="button" style="background:#f59e0b;color:#0f172a;border:none;border-radius:8px;padding:5px 10px;font-weight:800;cursor:pointer;">🛒 Buy Crazy Weapon ($10)</button>
           <button id="battle-btn" type="button" style="background:#ef4444;color:#ffffff;border:none;border-radius:8px;padding:5px 10px;font-weight:800;cursor:pointer;">⚔️ Fight Outside!</button>
         </div>
@@ -249,9 +250,48 @@
       if (urlParamsInit.get("autotest") === "1" || urlParamsInit.get("test") === "house") {
         startOverlay.style.display = "none";
       }
+      // =========================================================================
+      // BACKGROUND MUSIC ENGINE (100% Local Stereo Tracks + Dynamic Boss Crossfade)
+      // =========================================================================
+      const musicSpooky = new Audio("./music_spooky.m4a");
+      musicSpooky.loop = true;
+      musicSpooky.volume = 0.36;
+      const musicBoss = new Audio("./music_boss.m4a");
+      musicBoss.loop = true;
+      musicBoss.volume = 0.0;
+      let musicEnabled = true;
+      let musicStarted = false;
+      const musicBtn = document.getElementById("music-btn");
+
+      function startBackgroundMusic() {
+        if (!musicEnabled || musicStarted) return;
+        musicStarted = true;
+        musicSpooky.play().catch(() => { musicStarted = false; });
+        musicBoss.play().catch(() => {});
+      }
+
+      if (musicBtn) {
+        musicBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          musicEnabled = !musicEnabled;
+          musicBtn.textContent = musicEnabled ? "🔊 Music: ON" : "🔇 Music: OFF";
+          musicBtn.style.background = musicEnabled ? "#38bdf8" : "#64748b";
+          if (musicEnabled) {
+            musicStarted = false;
+            startBackgroundMusic();
+          } else {
+            musicSpooky.pause();
+            musicBoss.pause();
+          }
+        });
+      }
+      window.addEventListener("pointerdown", startBackgroundMusic, { once: true });
+      window.addEventListener("keydown", startBackgroundMusic, { once: true });
+
       document.getElementById("start-play-btn").addEventListener("click", () => {
         startOverlay.style.display = "none";
         if (audioCtx.state === "suspended") audioCtx.resume();
+        startBackgroundMusic();
         playChime();
       });
 
@@ -1143,6 +1183,7 @@
               return Boolean(r.torso || r.head || r.hipL || r.wingL || r.snakeSegs.length > 0 || r.roboArms.length > 0 || r.spiderLegs.length > 0);
             }).length;
             results.push({ name: `Lifelike Articulated Monster Rigs (${riggedCount}/${allMonstersForTest.length})`, pass: riggedCount === allMonstersForTest.length && riggedCount >= 18 });
+            results.push({ name: "Stereo Background Music (Spooky + Boss Crossfade)", pass: Boolean(musicSpooky && musicBoss && musicBtn) });
 
             // Restore player (or stay in House if ?test=house)
             if (new URLSearchParams(window.location.search).get("test") === "house") {
@@ -2128,6 +2169,15 @@
         if (fireflies) {
           fireflies.position.y = Math.sin(clock.elapsedTime * 0.9) * 0.45;
           fireflies.rotation.y = Math.sin(clock.elapsedTime * 0.15) * 0.04;
+        }
+
+        // Smooth dynamic music crossfade (Spooky Theme <-> Boss Battle Theme!)
+        if (musicEnabled && musicStarted) {
+          const bossAction = battleMode || (ghostInCage && !allHouseBossesCaged) || (allLabMonstersCaged && !ghostInCage);
+          const targetBossVol = bossAction ? 0.38 : 0.0;
+          const targetSpookyVol = bossAction ? 0.0 : 0.36;
+          musicBoss.volume = THREE.MathUtils.lerp(musicBoss.volume, targetBossVol, Math.min(1, dt * 2.5));
+          musicSpooky.volume = THREE.MathUtils.lerp(musicSpooky.volume, targetSpookyVol, Math.min(1, dt * 2.5));
         }
 
         drawMinimap();
