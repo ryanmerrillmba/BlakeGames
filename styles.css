@@ -39,3 +39,14 @@ h2 { margin: 0; font-size: 1.7rem; } .section-heading span { color: #a79bbd; fon
 .coming-soon { min-height: 407px; display: grid; place-content: center; text-align: center; color: #a79bbd; border-style: dashed; background: rgba(255,255,255,.035); }.plus { margin: auto; width: 50px; height: 50px; display: grid; place-items: center; border-radius: 50%; color: #1f1931; background: #9f93b7; font-size: 2rem; }.coming-soon p { font: 600 1.05rem Fredoka, sans-serif; line-height: 1.4; }
 footer { width: min(1120px, calc(100% - 40px)); margin: 0 auto; padding: 0 0 34px; color: #8d829e; font-size: .84rem; } footer span { color: var(--yellow); padding: 0 5px; }
 @media (max-width: 680px) { main { width: min(100% - 28px, 1120px); } nav { align-items: flex-start; }.nav-status { text-align: right; max-width: 120px; }.game-grid { grid-template-columns: 1fr; }.coming-soon { min-height: 180px; }.card-art { height: 175px; } }
+
+.the-game-art {
+  background: #000000;
+  color: #ffffff;
+  font-size: 2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.04em;
+}

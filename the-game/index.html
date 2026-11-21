@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="en" data-game="the-game">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Game — Blake Games</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        overflow: hidden;
+        background: #1e293b;
+        color: #f8fafc;
+        font-family: "Fredoka", "Space Grotesk", system-ui, -apple-system, sans-serif;
+        user-select: none;
+      }
+      #hud {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        right: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        pointer-events: none;
+        z-index: 10;
+      }
+      .panel {
+        background: rgba(15, 23, 42, 0.85);
+        backdrop-filter: blur(8px);
+        border: 2px solid rgba(148, 163, 184, 0.35);
+        border-radius: 16px;
+        padding: 12px 18px;
+        pointer-events: auto;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+        max-width: 480px;
+      }
+      .back-btn {
+        display: inline-block;
+        color: #93c5fd;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 0.95rem;
+        margin-bottom: 6px;
+      }
+      .back-btn:hover {
+        text-decoration: underline;
+      }
+      h1 {
+        font-size: 1.4rem;
+        color: #facc15;
+        margin-bottom: 4px;
+      }
+      #objective {
+        font-size: 1rem;
+        color: #e2e8f0;
+        line-height: 1.35;
+      }
+      #controls-hint {
+        font-size: 0.9rem;
+        color: #cbd5e1;
+        text-align: right;
+      }
+      #action-prompt {
+        position: fixed;
+        bottom: 36px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(250, 204, 21, 0.96);
+        color: #0f172a;
+        border: none;
+        font-weight: 800;
+        font-size: 1.15rem;
+        padding: 12px 26px;
+        border-radius: 999px;
+        box-shadow: 0 8px 25px rgba(250, 204, 21, 0.4);
+        display: none;
+        cursor: pointer;
+        z-index: 15;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="hud">
+      <div class="panel">
+        <a class="back-btn" href="../index.html">← Back to Blake Games</a>
+        <h1>The Game <span id="money-hud" style="color:#4ade80; font-size:1.1rem; margin-left:10px;">💰 $0</span></h1>
+        <div id="objective">Objective: Walk through the door into the weird lab!</div>
+      </div>
+      <div class="panel" id="controls-hint">
+        <strong>Move:</strong> Click/Drag Mouse, or W A S D / Arrows<br />
+        <strong>Action:</strong> SPACEBAR or E (or click yellow button)
+      </div>
+    </div>
+
+    <button id="action-prompt" type="button">Action</button>
+
+    <script type="module">
+      import * as THREE from "three";
+      import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x334155);
+
+      const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 250);
+      camera.position.set(0, 5, 7);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      document.body.appendChild(renderer.domElement);
+
+      // Bright lighting so the whole screen is clearly visible + Flashlight!
+      const ambient = new THREE.AmbientLight(0xffffff, 2.2);
+      scene.add(ambient);
+
+      const sunLight = new THREE.DirectionalLight(0xf8fafc, 1.3);
+      sunLight.position.set(15, 35, 20);
+      scene.add(sunLight);
+
+      const darkRoomLight = new THREE.PointLight(0x93c5fd, 12, 22);
+      darkRoomLight.position.set(0, 3.5, 0);
+      scene.add(darkRoomLight);
+
+      const labLight = new THREE.PointLight(0x4ade80, 22, 35);
+      labLight.position.set(0, 4.2, -15);
+      scene.add(labLight);
+
+      // Player Flashlight
+      const flashlight = new THREE.SpotLight(0xfffbeb, 65, 35, Math.PI / 4, 0.35, 0.8);
+      const flashlightTarget = new THREE.Object3D();
+      scene.add(flashlight);
+      scene.add(flashlightTarget);
+      flashlight.target = flashlightTarget;
+
+      // Game State
+      let player = null;
+      let legL = null, legR = null, armL = null, armR = null;
+      let flashlightMesh = null;
+      let clown = null;
+      let clownLegL = null, clownLegR = null;
+      let laserGuy = null;
+      let podCap0 = null;
+      let firstPodPos = new THREE.Vector3(-9.0, 0, -9.0);
+      const colliders = []; // { name, category, box }
+      const PLAYER_RADIUS = 0.42;
+
+      let walkTime = 0;
+      let stepTimer = 0;
+      let level = 1;
+      let visitedLab = false;
+      let lightTurnedOn = false;
+      let outsideEntered = false;
+      let clownCaptured = false;
+      let throwingClown = false;
+      let throwProgress = 0;
+      let throwStartPos = new THREE.Vector3();
+      let clownInCage = false;
+      let money = 0;
+      let borrowedMoney = false;
+      let paidForMoreRoom = false;
+
+      const objectiveEl = document.getElementById("objective");
+      const actionPromptEl = document.getElementById("action-prompt");
+      const moneyHudEl = document.getElementById("money-hud");
+
+      // Web Audio API Sound Effects
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      function playTone(freq, duration, type = "sine", vol = 0.14) {
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      }
+      function playFootstep() {
+        playTone(95 + Math.random() * 25, 0.06, "triangle", 0.07);
+      }
+      function playChime() {
+        playTone(523.25, 0.14, "triangle", 0.16);
+        setTimeout(() => playTone(659.25, 0.14, "triangle", 0.16), 120);
+        setTimeout(() => playTone(783.99, 0.25, "triangle", 0.18), 240);
+      }
+
+      // Load Blender scene.glb
+      const loader = new GLTFLoader();
+      loader.load(
+        "./scene.glb",
+        (gltf) => {
+          scene.add(gltf.scene);
+          player = gltf.scene.getObjectByName("Player_Human");
+          legL = gltf.scene.getObjectByName("Human_Leg_L");
+          legR = gltf.scene.getObjectByName("Human_Leg_R");
+          armL = gltf.scene.getObjectByName("Human_Arm_L");
+          armR = gltf.scene.getObjectByName("Human_Arm_R");
+          flashlightMesh = gltf.scene.getObjectByName("Flashlight_Body");
+          clown = gltf.scene.getObjectByName("Monster_Clown");
+          clownLegL = gltf.scene.getObjectByName("Clown_Leg_L");
+          clownLegR = gltf.scene.getObjectByName("Clown_Leg_R");
+          laserGuy = gltf.scene.getObjectByName("Monster_LaserGuy");
+          podCap0 = gltf.scene.getObjectByName("Pod_Cap_0");
+          const pod0 = gltf.scene.getObjectByName("Pod_Base_0");
+          if (pod0) firstPodPos.copy(pod0.position);
+
+          // Add a visible glowing beam cone right onto the tip of the flashlight in his hand!
+          if (flashlightMesh) {
+            const coneGeo = new THREE.ConeGeometry(1.1, 5.0, 20, 1, true);
+            coneGeo.translate(0, -2.5, 0);
+            coneGeo.rotateX(Math.PI / 2);
+            const coneMat = new THREE.MeshBasicMaterial({
+              color: 0xfffbeb,
+              transparent: true,
+              opacity: 0.18,
+              side: THREE.DoubleSide,
+              depthWrite: false,
+            });
+            const beamCone = new THREE.Mesh(coneGeo, coneMat);
+            beamCone.position.set(0, 0, -0.2);
+            flashlightMesh.add(beamCone);
+          }
+
+          // Put lids on all cages except First Cage (Pod_Cap_0) and build solid colliders
+          gltf.scene.updateMatrixWorld(true);
+          gltf.scene.traverse((obj) => {
+            if (obj.name.startsWith("Pod_Cap_") && obj.name !== "Pod_Cap_0") {
+              obj.position.y = 3.0;
+              obj.rotation.set(0, 0, 0);
+            }
+            if (!obj.isMesh) return;
+            const n = obj.name;
+            let category = null;
+            if (n.includes("Wall") && !n.includes("Top")) category = "wall";
+            else if (n.includes("Trunk")) category = "tree";
+            else if (n.startsWith("Pod_Base_") || n.startsWith("Forest_Rock_") || n.startsWith("Lab_Table_") || n.startsWith("Abandoned_Crate_") || n.startsWith("Borrow_Money_Desk")) {
+              category = "object";
+            }
+            if (category) {
+              const box = new THREE.Box3().setFromObject(obj);
+              colliders.push({ name: n, category, box });
+            }
+          });
+          if (podCap0) {
+            podCap0.position.set(firstPodPos.x + 1.2, 0.35, firstPodPos.z + 1.4);
+          }
+
+          // Expose test hooks for automated collision & gameplay verification
+          window.__THE_GAME__ = {
+            ready: true,
+            getPlayerPos: () => ({ x: player.position.x, y: player.position.y, z: player.position.z, rotY: player.rotation.y }),
+            setPlayerPos: (x, z) => { player.position.x = x; player.position.z = z; },
+            setLevel: (lvl) => { level = lvl; },
+            getColliders: () => colliders.map((c) => ({
+              name: c.name,
+              category: c.category,
+              min: { x: c.box.min.x, z: c.box.min.z },
+              max: { x: c.box.max.x, z: c.box.max.z },
+            })),
+            canStandAt: (x, z) => !collidesAt(x, z),
+            moveStep: (dx, dz, dt = 0.05) => movePlayer(dx, dz, dt),
+          };
+
+          if (player) {
+            camera.position.set(player.position.x, player.position.y + 8.5, player.position.z + 5.5);
+            camera.lookAt(player.position.x, player.position.y + 1.0, player.position.z);
+          }
+
+          // Built-in automated collision & facing test suite when ?autotest=1 is passed
+          if (new URLSearchParams(window.location.search).get("autotest") === "1") {
+            const results = [];
+            const origX = player.position.x, origZ = player.position.z, origRot = player.rotation.y;
+
+            // Test 1: Forward facing
+            movePlayer(0, -1, 0.05);
+            results.push({ name: "Faces Forward", pass: Math.abs(player.rotation.y) < 0.01 });
+
+            // Test 2: Solid Wall collision
+            player.position.set(-3.8, 0, 0);
+            for (let i = 0; i < 40; i++) movePlayer(-1, 0, 0.05);
+            results.push({ name: "Blocks Solid Walls", pass: player.position.x > -4.9 });
+
+            // Test 3: Tree collision
+            level = 2;
+            const tree = colliders.find((c) => c.category === "tree");
+            let treePass = false;
+            if (tree) {
+              const cx = (tree.box.min.x + tree.box.max.x) / 2;
+              const cz = (tree.box.min.z + tree.box.max.z) / 2;
+              player.position.set(tree.box.min.x - 1.2, 0, cz);
+              for (let i = 0; i < 40; i++) movePlayer(1, 0, 0.05);
+              treePass = player.position.x < cx;
+            }
+            results.push({ name: "Blocks Trees", pass: treePass });
+
+            // Test 4: Solid Object collision (Pod_Base_0)
+            const pod = colliders.find((c) => c.name === "Pod_Base_0");
+            let podPass = false;
+            if (pod) {
+              const cx = (pod.box.min.x + pod.box.max.x) / 2;
+              const cz = (pod.box.min.z + pod.box.max.z) / 2;
+              player.position.set(cx, 0, pod.box.max.z + 1.2);
+              for (let i = 0; i < 40; i++) movePlayer(0, -1, 0.05);
+              podPass = player.position.z > cz;
+            }
+            results.push({ name: "Blocks Solid Objects", pass: podPass });
+
+            // Restore player
+            level = 1;
+            player.position.set(origX, 0, origZ);
+            player.rotation.y = origRot;
+
+            const allPass = results.every((r) => r.pass);
+            const badge = document.createElement("div");
+            badge.id = "autotest-results";
+            badge.style.cssText =
+              "position:fixed;bottom:16px;right:16px;background:rgba(15,23,42,0.92);color:#f8fafc;border:2px solid " +
+              (allPass ? "#22c55e" : "#ef4444") +
+              ";border-radius:12px;padding:12px 16px;font-size:0.9rem;z-index:30;line-height:1.5;";
+            badge.innerHTML =
+              "<strong>" + (allPass ? "✅ ALL COLLISION TESTS PASSED" : "❌ SOME TESTS FAILED") + "</strong><br>" +
+              results.map((r) => (r.pass ? "✅ " : "❌ ") + r.name).join("<br>") +
+              `<br><small>Colliders: ${colliders.length} (${colliders.filter(c=>c.category==="wall").length} walls, ${colliders.filter(c=>c.category==="tree").length} trees, ${colliders.filter(c=>c.category==="object").length} objects)</small>`;
+            document.body.appendChild(badge);
+          }
+        },
+        undefined,
+        (err) => {
+          console.error("Failed to load scene.glb:", err);
+          objectiveEl.textContent = "Error loading 3D scene.";
+        }
+      );
+
+      // Input: Keyboard + Mouse Click/Drag to Walk
+      const keys = {};
+      let mouseTarget = null;
+      let isMouseDown = false;
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+      const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
+      function updateMouseTarget(clientX, clientY) {
+        pointer.x = (clientX / window.innerWidth) * 2 - 1;
+        pointer.y = -(clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        const hit = new THREE.Vector3();
+        if (raycaster.ray.intersectPlane(floorPlane, hit)) {
+          mouseTarget = hit;
+        }
+      }
+
+      renderer.domElement.addEventListener("pointerdown", (e) => {
+        isMouseDown = true;
+        updateMouseTarget(e.clientX, e.clientY);
+      });
+      window.addEventListener("pointermove", (e) => {
+        if (isMouseDown) updateMouseTarget(e.clientX, e.clientY);
+      });
+      window.addEventListener("pointerup", () => {
+        isMouseDown = false;
+      });
+
+      function handleAction() {
+        if (!player) return;
+
+        // 1. Level 1: Turn on the light in the Dark Room
+        const switchPos = new THREE.Vector3(-4.8, 0, 1.5);
+        if (level === 1 && visitedLab && !lightTurnedOn && player.position.distanceTo(switchPos) < 3.5) {
+          lightTurnedOn = true;
+          level = 2;
+          playChime();
+          darkRoomLight.color.setHex(0xfef08a);
+          darkRoomLight.intensity = 28;
+          actionPromptEl.style.display = "none";
+          objectiveEl.textContent = "💡 Light is ON! Go through the OTHER two doors in the Dark Room into the Forest!";
+          return;
+        }
+
+        // 2. Level 2: Throw Clown into First Cage
+        const distPod = Math.hypot(player.position.x - firstPodPos.x, player.position.z - firstPodPos.z);
+        if (clownCaptured && !clownInCage && !throwingClown && distPod < 5.0 && clown) {
+          throwingClown = true;
+          throwProgress = 0;
+          throwStartPos.copy(clown.position);
+          actionPromptEl.style.display = "none";
+          playTone(350, 0.2, "sine", 0.2);
+          return;
+        }
+
+        // 3. At Clown's First Cage: Take $10 for free!
+        if (clownInCage && !borrowedMoney && distPod < 5.0) {
+          borrowedMoney = true;
+          money += 10;
+          moneyHudEl.textContent = `💰 $${money}`;
+          playChime();
+          actionPromptEl.style.display = "none";
+          objectiveEl.textContent = "💰 Got $10 for free from the Clown! Go back to the Abandoned House and Pay $10!";
+          return;
+        }
+
+        // 4. Inside Abandoned House: Pay $10 or use Teleporter!
+        const inCabin =
+          player.position.x > -12.8 &&
+          player.position.x < -7.2 &&
+          player.position.z > 25.2 &&
+          player.position.z < 30.8;
+
+        if (clownInCage && inCabin && borrowedMoney && !paidForMoreRoom && money >= 10) {
+          paidForMoreRoom = true;
+          money -= 10;
+          moneyHudEl.textContent = `💰 $${money}`;
+          playChime();
+          objectiveEl.textContent = "🔨 House Fixed! More Cauldrons, Crafting Table & Teleporter UNLOCKED!";
+          return;
+        }
+
+        if (paidForMoreRoom && inCabin) {
+          player.position.set(0, 0, -10.0);
+          playChime();
+          actionPromptEl.style.display = "none";
+          objectiveEl.textContent = "🌀 Teleported back into the Real Lab!";
+        }
+      }
+
+      window.addEventListener("keydown", (e) => {
+        keys[e.code] = true;
+        mouseTarget = null;
+        if (e.code === "KeyE" || e.code === "Space") {
+          if (e.code === "Space") e.preventDefault();
+          handleAction();
+        }
+      });
+      window.addEventListener("keyup", (e) => {
+        keys[e.code] = false;
+      });
+      actionPromptEl.addEventListener("click", handleAction);
+
+      window.addEventListener("resize", () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      function collidesAt(x, z) {
+        for (let i = 0; i < colliders.length; i++) {
+          const b = colliders[i].box;
+          if (
+            x + PLAYER_RADIUS > b.min.x &&
+            x - PLAYER_RADIUS < b.max.x &&
+            z + PLAYER_RADIUS > b.min.z &&
+            z - PLAYER_RADIUS < b.max.z
+          ) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      function movePlayer(dx, dz, dt) {
+        const speed = 6.5;
+        const len = Math.hypot(dx, dz);
+        if (len === 0) return;
+        const nx = dx / len;
+        const nz = dz / len;
+
+        // Flip human forward! (In glTF from Blender, face & flashlight are on local -Z)
+        player.rotation.y = Math.atan2(-nx, -nz);
+
+        const maxZ = level === 2 ? 195.0 : 3.3;
+        const maxX = level === 2 && player.position.z > 4.0 ? 95.0 : 11.3;
+
+        const nextX = THREE.MathUtils.clamp(player.position.x + nx * speed * dt, -maxX, maxX);
+        if (!collidesAt(nextX, player.position.z)) {
+          player.position.x = nextX;
+        }
+        const nextZ = THREE.MathUtils.clamp(player.position.z + nz * speed * dt, -25.3, maxZ);
+        if (!collidesAt(player.position.x, nextZ)) {
+          player.position.z = nextZ;
+        }
+      }
+
+      const clock = new THREE.Clock();
+      const flashWorldPos = new THREE.Vector3();
+
+      function animate() {
+        requestAnimationFrame(animate);
+        const dt = Math.min(clock.getDelta(), 0.05);
+
+        if (!player) {
+          renderer.render(scene, camera);
+          return;
+        }
+
+        // Movement
+        let dx = 0;
+        let dz = 0;
+        if (keys["KeyW"] || keys["ArrowUp"]) dz -= 1;
+        if (keys["KeyS"] || keys["ArrowDown"]) dz += 1;
+        if (keys["KeyA"] || keys["ArrowLeft"]) dx -= 1;
+        if (keys["KeyD"] || keys["ArrowRight"]) dx += 1;
+
+        if (dx === 0 && dz === 0 && mouseTarget) {
+          const mdx = mouseTarget.x - player.position.x;
+          const mdz = mouseTarget.z - player.position.z;
+          if (Math.hypot(mdx, mdz) > 0.25) {
+            dx = mdx;
+            dz = mdz;
+          } else {
+            mouseTarget = null;
+          }
+        }
+
+        if (dx !== 0 || dz !== 0) {
+          movePlayer(dx, dz, dt);
+          walkTime += dt * 10;
+          const swing = Math.sin(walkTime) * 0.55;
+          if (legL) legL.rotation.x = swing;
+          if (legR) legR.rotation.x = -swing;
+          if (armL) armL.rotation.x = -swing * 0.8;
+          if (armR) armR.rotation.x = 0.96 + swing * 0.2;
+          stepTimer += dt;
+          if (stepTimer > 0.28) {
+            playFootstep();
+            stepTimer = 0;
+          }
+        } else {
+          if (legL) legL.rotation.x *= 0.8;
+          if (legR) legR.rotation.x *= 0.8;
+          if (armL) armL.rotation.x *= 0.8;
+        }
+
+        // Update Flashlight beam directly from the flashlight in his hand pointing forward (-Z local)
+        const forwardX = -Math.sin(player.rotation.y);
+        const forwardZ = -Math.cos(player.rotation.y);
+        if (flashlightMesh) {
+          flashlightMesh.getWorldPosition(flashWorldPos);
+          flashlight.position.copy(flashWorldPos);
+        } else {
+          flashlight.position.set(player.position.x, player.position.y + 1.3, player.position.z);
+        }
+        flashlightTarget.position.set(
+          flashlight.position.x + forwardX * 8,
+          flashlight.position.y - 0.6,
+          flashlight.position.z + forwardZ * 8
+        );
+
+        // Laser Guy patrols far out in the forest (doesn't shoot yet)
+        if (laserGuy) {
+          laserGuy.rotation.y += dt * 0.8;
+        }
+
+        // Level 1: Enter Lab
+        if (level === 1 && !visitedLab && player.position.z < -4.5) {
+          visitedLab = true;
+          playTone(220, 0.3, "sawtooth", 0.12);
+          objectiveEl.textContent = "Whoa! Go back to the Dark Room and turn on the yellow Light Switch!";
+        }
+
+        // Level 2: Enter Forest
+        if (level === 2 && !outsideEntered && player.position.z > 4.5) {
+          outsideEntered = true;
+          playTone(220, 0.3, "sawtooth", 0.12);
+          objectiveEl.textContent = "🤡 Capture a Clown! Use your flashlight to find him in the forest!";
+        }
+
+        // Level 2: Clown tries to scare you, then you catch him
+        if (level === 2 && outsideEntered && !clownCaptured && !clownInCage && clown) {
+          const dxC = player.position.x - clown.position.x;
+          const dzC = player.position.z - clown.position.z;
+          const distC = Math.hypot(dxC, dzC);
+          if (distC < 8.0 && distC >= 2.2) {
+            clown.position.x += (dxC / distC) * 2.0 * dt;
+            clown.position.z += (dzC / distC) * 2.0 * dt;
+            clown.rotation.y = Math.atan2(dxC, dzC);
+            objectiveEl.textContent = "🤡 BOO! The Clown is trying to scare you! Catch him!";
+          }
+          if (distC < 2.2) {
+            clownCaptured = true;
+            playChime();
+            objectiveEl.textContent = "First cage! Bring the Clown back to the First cage and throw him in!";
+          }
+        }
+
+        // Clown follows player with moving feet (until thrown!)
+        if (clownCaptured && !clownInCage && !throwingClown && clown) {
+          const targetX = player.position.x - forwardX * 1.6;
+          const targetZ = player.position.z - forwardZ * 1.6;
+          const moveDist = Math.hypot(targetX - clown.position.x, targetZ - clown.position.z);
+          clown.position.x += (targetX - clown.position.x) * 0.1;
+          clown.position.z += (targetZ - clown.position.z) * 0.1;
+          clown.rotation.y = player.rotation.y;
+          if (moveDist > 0.15) {
+            const cSwing = Math.sin(clock.elapsedTime * 12) * 0.6;
+            if (clownLegL) clownLegL.rotation.x = cSwing;
+            if (clownLegR) clownLegR.rotation.x = -cSwing;
+          } else {
+            if (clownLegL) clownLegL.rotation.x *= 0.8;
+            if (clownLegR) clownLegR.rotation.x *= 0.8;
+          }
+        }
+
+        // Throwing Clown animation
+        if (throwingClown && clown) {
+          throwProgress += dt * 1.6;
+          const t = Math.min(throwProgress, 1.0);
+          clown.position.x = THREE.MathUtils.lerp(throwStartPos.x, firstPodPos.x, t);
+          clown.position.z = THREE.MathUtils.lerp(throwStartPos.z, firstPodPos.z, t);
+          clown.position.y = Math.sin(t * Math.PI) * 2.5 + 0.3 * t;
+          if (t >= 1.0) {
+            throwingClown = false;
+            clownInCage = true;
+            if (podCap0) {
+              podCap0.position.set(firstPodPos.x, 3.0, firstPodPos.z);
+              podCap0.rotation.set(0, 0, 0);
+            }
+            playChime();
+            objectiveEl.textContent = "🏠 The house is unlocked! Go find the abandoned house in the forest!";
+          }
+        }
+
+        // Contextual Action Prompts
+        const switchPos = new THREE.Vector3(-4.8, 0, 1.5);
+        const distPod = Math.hypot(player.position.x - firstPodPos.x, player.position.z - firstPodPos.z);
+        const inCabin =
+          player.position.x > -12.8 &&
+          player.position.x < -7.2 &&
+          player.position.z > 25.2 &&
+          player.position.z < 30.8;
+
+        if (!clownInCage && inCabin) {
+          player.position.z = 25.0;
+          objectiveEl.textContent = "🔒 House is LOCKED! Put the Clown in the First cage first!";
+        }
+
+        if (level === 1 && visitedLab && !lightTurnedOn && player.position.distanceTo(switchPos) < 3.5) {
+          actionPromptEl.textContent = "Press SPACEBAR / E to Turn On the Light!";
+          actionPromptEl.style.display = "block";
+        } else if (clownCaptured && !clownInCage && !throwingClown && distPod < 5.0) {
+          actionPromptEl.textContent = "Press SPACEBAR to Throw the clown in!";
+          actionPromptEl.style.display = "block";
+        } else if (clownInCage && inCabin && !borrowedMoney) {
+          objectiveEl.textContent = "🏚️ It's abandoned! Go back to the Clown's cage and take $10 for free!";
+          actionPromptEl.style.display = "none";
+        } else if (clownInCage && !borrowedMoney && distPod < 5.0) {
+          actionPromptEl.textContent = "Press SPACEBAR / E to Take $10 for free!";
+          actionPromptEl.style.display = "block";
+        } else if (clownInCage && inCabin && borrowedMoney && !paidForMoreRoom) {
+          actionPromptEl.textContent = "Press SPACEBAR / E to Pay $10 & Fix House!";
+          actionPromptEl.style.display = "block";
+        } else if (paidForMoreRoom && inCabin) {
+          actionPromptEl.textContent = "🌀 Press SPACEBAR / E to Teleport back to the Real Lab!";
+          actionPromptEl.style.display = "block";
+        } else {
+          actionPromptEl.style.display = "none";
+        }
+
+        // Smooth high-angle follow camera (looks cleanly over walls!)
+        const targetCamPos = new THREE.Vector3(
+          player.position.x,
+          player.position.y + 8.5,
+          player.position.z + 5.5
+        );
+        camera.position.lerp(targetCamPos, 0.12);
+        camera.lookAt(player.position.x, player.position.y + 1.0, player.position.z);
+
+        renderer.render(scene, camera);
+      }
+
+      animate();
+    </script>
+  </body>
+</html>
