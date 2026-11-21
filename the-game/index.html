@@ -187,7 +187,20 @@
         { key: "Monster_Robot", label: "🤖 Robot", podIdx: 11, flies: false },
         { key: "Monster_Frankenstein", label: "🧟‍♂️ Frankenstein", podIdx: 12, flies: false },
         { key: "Monster_Zombie", label: "🧟 Zombie", podIdx: 13, flies: false },
+        { key: "Monster_Werewolf", label: "🐺 Gray Werewolf", podIdx: 12, flies: false },
+        { key: "Monster_Mummy", label: "🧻 Mummy", podIdx: 13, flies: false },
       ];
+
+      // 3 Super-Rare Hard-to-Find House Bosses (unlocks ONLY far in the game after Shadow Guy & Ghost!)
+      const houseBossDefs = [
+        { key: "Monster_RainbowSnake", label: "🌈🐍 Rainbow Snake (RARE BOSS)", cageIdx: 0, flies: false, speed: 3.4 },
+        { key: "Monster_FlyingPumpkin", label: "🎃🪽 Crazy Flying Pumpkin (RARE BOSS)", cageIdx: 1, flies: true, speed: 4.2 },
+        { key: "Monster_BoneBreaker", label: "🦴💥 Armored Bone Breaker (FINAL BOSS)", cageIdx: 2, flies: false, speed: 3.8 },
+      ];
+      let bossIdx = 0;
+      let activeBossCaptured = false;
+      let activeBossThrowing = false;
+      let allBossesCaged = false;
       let labQueueIdx = 0; // active monster in labMonsterDefs after slimeInCage
       let activeLabCaptured = false;
       let activeLabThrowing = false;
@@ -288,6 +301,12 @@
             if (def.obj) def.obj.visible = false;
             const p = gltf.scene.getObjectByName(`Pod_Base_${def.podIdx}`);
             def.podPos = p ? p.position.clone() : new THREE.Vector3(0, 0, -15);
+          }
+          for (const bdef of houseBossDefs) {
+            bdef.obj = gltf.scene.getObjectByName(bdef.key);
+            if (bdef.obj) bdef.obj.visible = false;
+            const c = gltf.scene.getObjectByName(`House_Cage_Base_${bdef.cageIdx}`);
+            bdef.cagePos = c ? c.position.clone() : new THREE.Vector3(-10, 0, 30.8);
           }
 
           podCap0 = gltf.scene.getObjectByName("Pod_Cap_0");
@@ -638,6 +657,19 @@
           actionPromptEl.style.display = "none";
           playTone(350, 0.2, "sine", 0.2);
           return;
+        }
+
+        // Throw captured SUPER-RARE House Boss (Rainbow Snake / Flying Pumpkin / Bone Breaker) into its House Cage!
+        if (ghostInCage && !allBossesCaged && activeBossCaptured && !activeBossThrowing) {
+          const bdef = houseBossDefs[bossIdx];
+          if (bdef && bdef.obj && Math.hypot(player.position.x - bdef.cagePos.x, player.position.z - bdef.cagePos.z) < 4.8) {
+            activeBossThrowing = true;
+            throwProgress = 0;
+            throwStartPos.copy(bdef.obj.position);
+            actionPromptEl.style.display = "none";
+            playTone(460, 0.25, "sine", 0.22);
+            return;
+          }
         }
 
         // Throw captured TELEPORTING GHOST into House Cage 2!
@@ -1230,8 +1262,68 @@
           if (t >= 1.0) {
             throwingGhost = false;
             ghostInCage = true;
+            if (houseBossDefs[0] && houseBossDefs[0].obj) houseBossDefs[0].obj.visible = true;
             playChime();
-            objectiveEl.textContent = "👻🏆 TELEPORTING GHOST CAGED! You caught ALL 5 MONSTERS, Blake!";
+            objectiveEl.textContent = "🌈🐍 SUPER-RARE BOSS UNLOCKED! Find the Rainbow Snake deep in the forest!";
+          }
+        }
+
+        // 3 SUPER-RARE HARD-TO-FIND HOUSE BOSSES (Rainbow Snake -> Flying Pumpkin -> Bone Breaker!)
+        if (ghostInCage && !allBossesCaged && bossIdx < houseBossDefs.length) {
+          const bdef = houseBossDefs[bossIdx];
+          if (bdef && bdef.obj) {
+            bdef.obj.visible = true;
+            if (bdef.flies && !activeBossThrowing) {
+              bdef.obj.position.y = 2.4 + Math.sin(clock.elapsedTime * 6) * 0.5;
+              // Crazy Flying Pumpkin zips around in the air!
+              if (!activeBossCaptured) {
+                bdef.obj.position.x += Math.cos(clock.elapsedTime * 2.2) * 3.5 * dt;
+                bdef.obj.position.z += Math.sin(clock.elapsedTime * 2.2) * 3.5 * dt;
+              }
+            }
+            if (activeBossThrowing) {
+              throwProgress += dt * 1.6;
+              const t = Math.min(throwProgress, 1.0);
+              bdef.obj.position.x = THREE.MathUtils.lerp(throwStartPos.x, bdef.cagePos.x, t);
+              bdef.obj.position.z = THREE.MathUtils.lerp(throwStartPos.z, bdef.cagePos.z, t);
+              bdef.obj.position.y = Math.sin(t * Math.PI) * 2.8 + (bdef.flies ? 0.9 : 0.2) * t;
+              if (t >= 1.0) {
+                activeBossThrowing = false;
+                activeBossCaptured = false;
+                money += 50;
+                updateHudStats();
+                playChime();
+                bossIdx += 1;
+                if (bossIdx < houseBossDefs.length) {
+                  const nb = houseBossDefs[bossIdx];
+                  if (nb.obj) nb.obj.visible = true;
+                  objectiveEl.textContent = `🏆 ${bdef.label} CAGED (+$50)! Next Super-Rare Boss: ${nb.label}!`;
+                } else {
+                  allBossesCaged = true;
+                  objectiveEl.textContent = "👑🏆 YOU BEAT THE ENTIRE GAME, BLAKE! EVERY SINGLE MONSTER & RARE BOSS CAGED!";
+                }
+              }
+            } else if (activeBossCaptured) {
+              const tx = player.position.x - forwardX * 2.2;
+              const tz = player.position.z - forwardZ * 2.2;
+              bdef.obj.position.x += (tx - bdef.obj.position.x) * 0.1;
+              bdef.obj.position.z += (tz - bdef.obj.position.z) * 0.1;
+              bdef.obj.rotation.y = player.rotation.y;
+            } else {
+              const dxB = player.position.x - bdef.obj.position.x;
+              const dzB = player.position.z - bdef.obj.position.z;
+              const distB = Math.hypot(dxB, dzB);
+              if (distB < 14.0 && distB >= 2.3) {
+                bdef.obj.position.x += (dxB / distB) * bdef.speed * dt;
+                bdef.obj.position.z += (dzB / distB) * bdef.speed * dt;
+                bdef.obj.rotation.y = Math.atan2(dxB, dzB);
+              }
+              if (distB < 2.3) {
+                activeBossCaptured = true;
+                playChime();
+                objectiveEl.textContent = `🔥 You caught ${bdef.label}! Bring it to House Cage ${bdef.cageIdx + 1} & press SPACEBAR!`;
+              }
+            }
           }
         }
 
