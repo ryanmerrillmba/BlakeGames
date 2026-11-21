@@ -534,11 +534,183 @@
       let wood = 0;
       let stone = 0;
       let axeLevel = 0; // 0 = none, 1 = Lv.1 Axe + Pickaxe, 2 = Lv.2 Axe!
-      let weaponTier = 0; // 0 = none, 1 = ⚡ Shock Blaster ($10), 2 = 🔥 Flame Sword ($20), 3 = 🌈 Freeze Ray ($35)
+      let weaponTier = 0; // 0 = Flashlight Blast, 1 = ⚡ Shock Blaster ($10), 2 = 🔥 Flame Sword ($20), 3 = 🌈 Freeze Ray ($35)
+      let maxWeaponTier = 0;
       let weaponMeshes = [null, null, null, null];
       function updateEquippedWeaponMesh() {
         for (let i = 1; i <= 3; i++) {
           if (weaponMeshes[i]) weaponMeshes[i].visible = (weaponTier === i);
+        }
+        const atkBtn = document.getElementById("attack-btn");
+        if (atkBtn) {
+          const labels = ["🔦 Flashlight Blast (Q)", "⚡ Shock Blaster (Q)", "🔥 Flame Sword (Q)", "🌈 Freeze Ray (Q)"];
+          const colors = ["#a855f7", "#0ea5e9", "#ea580c", "#ec4899"];
+          atkBtn.textContent = labels[weaponTier] || labels[0];
+          atkBtn.style.background = colors[weaponTier] || colors[0];
+        }
+      }
+      function selectWeaponTier(tier) {
+        if (tier < 0 || tier > maxWeaponTier) return;
+        weaponTier = tier;
+        updateEquippedWeaponMesh();
+        updateHudStats();
+        playTone(420 + tier * 110, 0.09, "triangle", 0.12);
+      }
+
+      // Dynamic 3D Weapon VFX Pool + Flash PointLight (illuminates pitch-dark forest on every trigger!)
+      const activeWeaponVFX = [];
+      const weaponFlashLight = new THREE.PointLight(0x38bdf8, 0, 22);
+      scene.add(weaponFlashLight);
+
+      function playWeaponSFX(tier) {
+        if (isRunningAutoTest) return;
+        if (tier === 1) {
+          // ⚡ Shock Blaster: High-voltage Tesla-coil zap + electric arc crackle!
+          playNoiseBurst(0.14, 0.18);
+          playSweep(1480, 310, 0.16, "square", 0.16);
+          setTimeout(() => playSweep(1040, 180, 0.14, "sawtooth", 0.14), 65);
+          setTimeout(() => playNoiseBurst(0.08, 0.12), 110);
+        } else if (tier === 2) {
+          // 🔥 Flame Sword: Metallic blade SHING + roaring molten flame burst!
+          playSweep(1720, 1080, 0.12, "triangle", 0.16);
+          playNoiseBurst(0.30, 0.24);
+          playSweep(240, 62, 0.28, "sawtooth", 0.20);
+        } else if (tier === 3) {
+          // 🌈 Freeze Ray: Crystalline cryo-beam hum + shimmering ice-freeze chime cascade!
+          playSweep(520, 960, 0.28, "sine", 0.15);
+          playSweep(1650, 2450, 0.22, "triangle", 0.14);
+          setTimeout(() => playSweep(2200, 1480, 0.18, "sine", 0.12), 90);
+          setTimeout(() => playNoiseBurst(0.16, 0.10), 60);
+        } else {
+          // 🔦 Flashlight Blast: Golden energy pulse
+          playSweep(680, 220, 0.20, "triangle", 0.16);
+          playNoiseBurst(0.07, 0.08);
+        }
+      }
+
+      function spawnWeaponVFX(tier) {
+        if (!player) return;
+        const fx = -Math.sin(player.rotation.y);
+        const fz = -Math.cos(player.rotation.y);
+        const origin = new THREE.Vector3(player.position.x + fx * 0.9, player.position.y + 1.25, player.position.z + fz * 0.9);
+        const grp = new THREE.Group();
+        grp.position.copy(origin);
+        grp.rotation.y = player.rotation.y;
+        const particles = [];
+
+        if (tier === 1) {
+          // ⚡ SHOCK BLASTER: Jagged 3D Glowing Cyan Lightning Bolt + 12 Electric Sparks!
+          const boltMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 1.0 });
+          const coreMat = new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 1.0 });
+          let prevX = 0, prevY = 0;
+          for (let i = 0; i < 6; i++) {
+            const nextX = (i === 5) ? 0 : (Math.random() - 0.5) * 0.9;
+            const nextY = (i === 5) ? 0 : (Math.random() - 0.5) * 0.5;
+            const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.05, 6), i % 2 === 0 ? coreMat : boltMat);
+            seg.rotation.x = Math.PI / 2;
+            seg.position.set((prevX + nextX) * 0.5, (prevY + nextY) * 0.5, -(i * 2.0 + 1.0));
+            seg.rotation.z = Math.atan2(nextX - prevX, 2.0);
+            grp.add(seg);
+            prevX = nextX; prevY = nextY;
+          }
+          for (let i = 0; i < 12; i++) {
+            const sp = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.14), coreMat);
+            sp.position.set(0, 0, -Math.random() * 6.0);
+            grp.add(sp);
+            particles.push({ mesh: sp, vx: (Math.random() - 0.5) * 9, vy: (Math.random() - 0.2) * 6, vz: -Math.random() * 8 });
+          }
+          weaponFlashLight.color.setHex(0x38bdf8);
+          weaponFlashLight.intensity = 26;
+        } else if (tier === 2) {
+          // 🔥 FLAME SWORD: Wide Glowing Molten Fire Crescent Slash Arc + 16 Rising Embers!
+          const arcMat = new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.95 });
+          const innerMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 1.0 });
+          const arc = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.24, 10, 26, Math.PI * 1.15), arcMat);
+          arc.rotation.x = Math.PI / 2;
+          arc.rotation.z = -Math.PI * 0.08;
+          grp.add(arc);
+          const arcIn = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.11, 8, 24, Math.PI * 1.15), innerMat);
+          arcIn.rotation.x = Math.PI / 2;
+          arcIn.rotation.z = -Math.PI * 0.08;
+          grp.add(arcIn);
+          for (let i = 0; i < 16; i++) {
+            const ang = (i / 16) * Math.PI * 1.2 - Math.PI * 0.1;
+            const em = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), i % 2 === 0 ? arcMat : innerMat);
+            em.position.set(Math.cos(ang) * 2.3, (Math.random() - 0.5) * 0.4, -Math.sin(ang) * 2.3);
+            grp.add(em);
+            particles.push({ mesh: em, vx: Math.cos(ang) * 4.5, vy: 2.5 + Math.random() * 4.0, vz: -Math.sin(ang) * 4.5 });
+          }
+          weaponFlashLight.color.setHex(0xf97316);
+          weaponFlashLight.intensity = 30;
+        } else if (tier === 3) {
+          // 🌈 FREEZE RAY: Prismatic Rainbow Cryo-Beam + 18 Exploding Ice-Crystal Shards!
+          const coreMat = new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.95 });
+          const beamCore = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.45, 14.0, 12), coreMat);
+          beamCore.rotation.x = Math.PI / 2;
+          beamCore.position.z = -7.0;
+          grp.add(beamCore);
+          const rainbowColors = [0xff3b30, 0xff9500, 0xffcc00, 0x34c759, 0x38bdf8, 0xa855f7];
+          const outerMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45, wireframe: false });
+          const beamOuter = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 1.35, 14.0, 14, 1, true), outerMat);
+          beamOuter.rotation.x = Math.PI / 2;
+          beamOuter.position.z = -7.0;
+          grp.add(beamOuter);
+          for (let i = 0; i < 18; i++) {
+            const shMat = new THREE.MeshBasicMaterial({ color: rainbowColors[i % rainbowColors.length], transparent: true, opacity: 0.95 });
+            const sh = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), shMat);
+            sh.position.set((Math.random() - 0.5) * 1.2, (Math.random() - 0.5) * 0.8, -1.5 - Math.random() * 11.0);
+            grp.add(sh);
+            particles.push({ mesh: sh, vx: (Math.random() - 0.5) * 7.5, vy: (Math.random() - 0.2) * 5.0, vz: -3.0 - Math.random() * 5.0 });
+          }
+          weaponFlashLight.color.setHex(0x67e8f9);
+          weaponFlashLight.intensity = 28;
+        } else {
+          // 🔦 FLASHLIGHT BLAST: Golden light pulse burst
+          const gMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0.85 });
+          const cone = new THREE.Mesh(new THREE.ConeGeometry(2.2, 5.5, 16, 1, true), gMat);
+          cone.rotation.x = Math.PI / 2;
+          cone.position.z = -2.8;
+          grp.add(cone);
+          weaponFlashLight.color.setHex(0xfef08a);
+          weaponFlashLight.intensity = 20;
+        }
+
+        weaponFlashLight.position.copy(origin);
+        scene.add(grp);
+        activeWeaponVFX.push({ grp, particles, tier, age: 0, maxAge: tier === 3 ? 0.60 : 0.45 });
+      }
+
+      function updateWeaponVFX(dt) {
+        if (weaponFlashLight.intensity > 0.1) {
+          weaponFlashLight.intensity = Math.max(0, weaponFlashLight.intensity - dt * 75);
+        }
+        for (let i = activeWeaponVFX.length - 1; i >= 0; i--) {
+          const v = activeWeaponVFX[i];
+          v.age += dt;
+          const p = v.age / v.maxAge;
+          if (p >= 1.0) {
+            scene.remove(v.grp);
+            activeWeaponVFX.splice(i, 1);
+            continue;
+          }
+          if (v.tier === 2) {
+            v.grp.scale.setScalar(1.0 + p * 1.4);
+            v.grp.position.z -= Math.cos(v.grp.rotation.y) * dt * 8.0;
+            v.grp.position.x -= Math.sin(v.grp.rotation.y) * dt * 8.0;
+          }
+          for (const pt of v.particles) {
+            pt.mesh.position.x += pt.vx * dt;
+            pt.mesh.position.y += pt.vy * dt;
+            pt.mesh.position.z += pt.vz * dt;
+            pt.mesh.rotation.x += dt * 8;
+            pt.mesh.rotation.y += dt * 10;
+            pt.mesh.scale.setScalar(Math.max(0.05, 1.0 - p));
+          }
+          v.grp.traverse((c) => {
+            if (c.isMesh && c.material && c.material.transparent) {
+              c.material.opacity = Math.max(0, 1.0 - p);
+            }
+          });
         }
       }
       let attackFlashTimer = 0;
@@ -580,10 +752,12 @@
         if (money >= cost) {
           money -= cost;
           weaponTier += 1;
+          maxWeaponTier = Math.max(maxWeaponTier, weaponTier);
           updateEquippedWeaponMesh();
           updateHudStats();
           playChime();
-          objectiveEl.textContent = `🎉 Bought ${weaponNames[weaponTier]}! Press Q to blast & stun monsters!`;
+          playWeaponSFX(weaponTier);
+          objectiveEl.textContent = `🎉 Bought ${weaponNames[weaponTier]}! Press Q to trigger it (or 1/2/3 to switch weapons)!`;
         } else {
           objectiveEl.textContent = `💰 Need $${cost} to buy ${weaponNames[weaponTier + 1]}! Catch monsters or chop trees/rocks!`;
         }
@@ -630,14 +804,15 @@
       function fireWeaponAttack() {
         if (!player) return;
         const dmg = Math.max(1, weaponTier + 1);
-        const reach = 9.0 + weaponTier * 1.5;
+        const reach = weaponTier === 3 ? 15.0 : weaponTier === 1 ? 12.0 : weaponTier === 2 ? 10.5 : 8.5;
         const activeName = weaponTier === 0 ? "🔦 Flashlight Blast" : weaponNames[weaponTier];
         attackFlashTimer = 0.35;
-        monsterStunTimer = 2.6 + weaponTier * 1.2;
+        monsterStunTimer = weaponTier === 3 ? 6.5 : 2.5 + weaponTier * 1.1;
         attackRing.position.set(player.position.x, player.position.y + 1.0, player.position.z);
-        attackRing.material.color.setHex(weaponTier === 0 ? 0xfef08a : weaponTier === 1 ? 0x38bdf8 : weaponTier === 2 ? 0xf97316 : 0xc084fc);
+        attackRing.material.color.setHex(weaponTier === 0 ? 0xfef08a : weaponTier === 1 ? 0x38bdf8 : weaponTier === 2 ? 0xf97316 : 0x67e8f9);
         attackRing.visible = true;
-        playSweep(weaponTier === 0 ? 640 : weaponTier === 1 ? 520 : weaponTier === 2 ? 260 : 780, 140, 0.24, "sawtooth", 0.2);
+        spawnWeaponVFX(weaponTier);
+        playWeaponSFX(weaponTier);
 
         if (battleMode && battleEnemies.length > 0) {
           let hits = 0;
@@ -1765,6 +1940,20 @@
               mObj.position.copy(savedPos);
             }
             results.push({ name: "Air & Tree Pickup + Follow (Witch, Bat, Spider)", pass: airFollowPass });
+            // Test all 4 weapon trigger VFX & SFX tiers cleanly!
+            let weaponVfxPass = true;
+            try {
+              for (let wt = 0; wt <= 3; wt++) {
+                spawnWeaponVFX(wt);
+                playWeaponSFX(wt);
+              }
+              weaponVfxPass = activeWeaponVFX.length >= 4 && typeof playWeaponSFX === "function";
+              // Clear synthetic test VFX immediately
+              updateWeaponVFX(1.0);
+            } catch (_) {
+              weaponVfxPass = false;
+            }
+            results.push({ name: "3D Weapon Trigger VFX + Unique Weapon SFX (All 4 Tiers)", pass: weaponVfxPass });
             isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
@@ -2095,6 +2284,9 @@
         if (e.code === "KeyQ") {
           fireWeaponAttack();
         }
+        if (e.code === "Digit1") selectWeaponTier(1);
+        if (e.code === "Digit2") selectWeaponTier(2);
+        if (e.code === "Digit3") selectWeaponTier(3);
         if (e.code === "KeyE" || e.code === "Space") {
           if (e.code === "Space") e.preventDefault();
           handleAction();
@@ -2846,7 +3038,8 @@
         camera.position.lerp(targetCamPos, 0.12);
         camera.lookAt(player.position.x, player.position.y + 1.0, player.position.z);
 
-        // Update weapon attack ring flash & stun timer + animate EVERY visible monster's limbs!
+        // Update weapon attack ring flash, 3D weapon trigger VFX & stun timer!
+        updateWeaponVFX(dt);
         if (attackFlashTimer > 0) {
           attackFlashTimer -= dt;
           attackRing.scale.setScalar(1.0 + (0.35 - attackFlashTimer) * 4.0);

@@ -87,5 +87,6 @@ test.describe("The Game — 3D Collision & Movement Tests", () => {
     await expect(badge).toContainText("Monster Physics & Sliding Engine Active");
     await expect(badge).toContainText("All 3 Blender 3D Shop Weapons Loaded & Equippable");
     await expect(badge).toContainText("Air & Tree Pickup + Follow (Witch, Bat, Spider)");
+    await expect(badge).toContainText("3D Weapon Trigger VFX + Unique Weapon SFX (All 4 Tiers)");
   });
 });
