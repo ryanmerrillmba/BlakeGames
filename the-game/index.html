@@ -203,18 +203,6 @@
 
     <button id="action-prompt" type="button">Action</button>
 
-    <!-- Live Bad Guy Zone Portrait Card (shows picture of the bad guy when you enter their zone!) -->
-    <div id="zone-card" style="display:none;position:fixed;top:140px;left:16px;z-index:24;background:rgba(15,23,42,0.92);border:2px solid #ef4444;border-radius:14px;padding:10px;width:168px;text-align:center;box-shadow:0 0 24px rgba(239,68,68,0.55);pointer-events:none;">
-      <div style="font-size:0.72rem;font-weight:900;color:#fca5a5;letter-spacing:0.6px;margin-bottom:6px;">⚠️ BAD GUY ZONE</div>
-      <canvas id="zone-canvas" width="144" height="144" style="border-radius:10px;border:2px solid #facc15;display:block;margin:0 auto;background:#020617;"></canvas>
-      <div id="zone-name" style="margin-top:6px;font-size:0.95rem;font-weight:900;color:#fde047;">🤡 Clown</div>
-      <div id="zone-atk" style="font-size:0.72rem;color:#93c5fd;margin-top:2px;">🔨 Carnival Mallet</div>
-      <div style="margin-top:5px;height:10px;background:#1e293b;border:1px solid #475569;border-radius:999px;overflow:hidden;">
-        <div id="zone-hp-fill" style="width:100%;height:100%;background:#ef4444;transition:width 0.15s ease;"></div>
-      </div>
-      <div id="zone-dist" style="font-size:0.74rem;color:#cbd5e1;margin-top:3px;">HP: 3/3</div>
-    </div>
-
     <!-- Bad Guys Gallery Modal -->
     <div id="badguys-modal" style="display:none;position:fixed;inset:0;z-index:80;background:rgba(2,6,14,0.94);backdrop-filter:blur(8px);overflow-y:auto;padding:24px;box-sizing:border-box;">
       <div style="max-width:960px;margin:0 auto;background:#0f172a;border:2px solid #f59e0b;border-radius:18px;padding:20px;color:#f8fafc;box-shadow:0 0 40px rgba(245,158,11,0.35);">
@@ -233,9 +221,9 @@
       </div>
     </div>
 
-    <div id="minimap-wrap">
-      <canvas id="minimap" width="170" height="170" style="border-radius:8px; display:block;"></canvas>
-      <div id="minimap-label">🗺️ Map: 🔵 You | 🔴 Monster | 🟢 Cage</div>
+    <div id="minimap-wrap" style="padding:5px;border-radius:10px;">
+      <canvas id="minimap" width="112" height="112" style="border-radius:6px; display:block;"></canvas>
+      <div id="minimap-label" style="font-size:0.64rem;margin-top:3px;letter-spacing:-0.2px;">🔵You 🔴Bad 🟢Cage</div>
     </div>
 
     <script type="module">
@@ -541,6 +529,31 @@
       let activeLabThrowing = false;
       let allLabMonstersCaged = false;
       let podCap0 = null;
+      const podCaps = {}; // podIdx -> Pod_Cap_* mesh
+
+      // Cage Containment & Cap-Sealing Physics Helpers
+      function placeMonsterInCage(monsterObj, cagePos, capObj = null, flies = false) {
+        if (!monsterObj || !cagePos) return false;
+        monsterObj.position.set(cagePos.x, flies ? 0.85 : 0.28, cagePos.z);
+        monsterObj.userData.caged = true;
+        if (capObj) {
+          capObj.position.set(cagePos.x, 3.0, cagePos.z);
+          capObj.rotation.set(0, 0, 0);
+        }
+        return true;
+      }
+
+      function isMonsterInsideCage(monsterObj, cagePos) {
+        if (!monsterObj || !cagePos) return false;
+        const horizDist = Math.hypot(monsterObj.position.x - cagePos.x, monsterObj.position.z - cagePos.z);
+        return horizDist < 0.45 && monsterObj.position.y >= 0.05 && monsterObj.position.y <= 1.6;
+      }
+
+      function isCageCapSealed(capObj, cagePos) {
+        if (!capObj || !cagePos) return false;
+        const horizDist = Math.hypot(capObj.position.x - cagePos.x, capObj.position.z - cagePos.z);
+        return horizDist < 0.30 && capObj.position.y >= 2.8 && capObj.position.y <= 3.3;
+      }
       let craftTableObj = null;
       let portalObjRef = null;
       let firstPodPos = new THREE.Vector3(-9.0, 0, -9.0);
@@ -1861,6 +1874,10 @@
           // 100% True 3D Models from Blender (all 2D sprite shortcuts removed!)
 
           podCap0 = gltf.scene.getObjectByName("Pod_Cap_0");
+          for (let ci = 0; ci < 14; ci++) {
+            const capM = gltf.scene.getObjectByName(`Pod_Cap_${ci}`);
+            if (capM) podCaps[ci] = capM;
+          }
           craftTableObj = gltf.scene.getObjectByName("Cabin_Crafting_Table");
           portalObjRef = gltf.scene.getObjectByName("Cabin_Teleporter_Portal");
           const pod0 = gltf.scene.getObjectByName("Pod_Base_0");
@@ -2112,7 +2129,7 @@
             results.push({ name: `Every Single Bad Guy Faces Forward (${allMonstersForTest.length}/21)`, pass: Boolean(typeof faceMonsterForward === "function" && allMonstersForTest.length === 21) });
             const hasSmoothHair = Boolean(gltf.scene.getObjectByName("Human_SmoothHair") && !gltf.scene.getObjectByName("Human_HairBang"));
             const hasCauldrons = Boolean(gltf.scene.getObjectByName("Lab_Cauldron_Rim_0") && gltf.scene.getObjectByName("Lab_Cauldron_Rim_10"));
-            results.push({ name: "Smooth Hero Hair + Lab Cauldrons + Bad Guy Zone Card", pass: Boolean(hasSmoothHair && hasCauldrons && zoneCardEl && labPodLights.length >= 10) });
+            results.push({ name: "Smooth Hero Hair + Lab Cauldrons + Compact Map", pass: Boolean(hasSmoothHair && hasCauldrons && minimapCanvas.width <= 120 && !document.getElementById("zone-card") && labPodLights.length >= 10) });
             const hasAll3Weapons = Boolean(weaponMeshes[1] && weaponMeshes[2] && weaponMeshes[3]);
             results.push({ name: "All 3 Blender 3D Shop Weapons Loaded & Equippable", pass: hasAll3Weapons });
 
@@ -2223,6 +2240,25 @@
               combatLoopPass = Boolean(blockedWhileAlive && allowedWhenDefeated && heroHpFillEl && helpModal && hasEnemyWeps);
             }
             results.push({ name: "Hero & Monster Health + Defeat-Before-Capture + Help + Enemy Weapons", pass: combatLoopPass });
+
+            // Permanent Physics Test #30 & #31: Bad Guy Inside Cage + Cage Cap Sealed on Top!
+            let insideCagePass = false;
+            let capSealedPass = false;
+            if (clown && podCap0) {
+              const savedClownPos = clown.position.clone();
+              const savedCapPos = podCap0.position.clone();
+              const savedCapRot = podCap0.rotation.clone();
+              const capStartedOpen = !isCageCapSealed(podCap0, firstPodPos);
+              placeMonsterInCage(clown, firstPodPos, podCap0, false);
+              insideCagePass = isMonsterInsideCage(clown, firstPodPos);
+              capSealedPass = capStartedOpen && isCageCapSealed(podCap0, firstPodPos);
+              clown.position.copy(savedClownPos);
+              clown.userData.caged = false;
+              podCap0.position.copy(savedCapPos);
+              podCap0.rotation.copy(savedCapRot);
+            }
+            results.push({ name: "Physics: Caged Bad Guy Verified Inside Cage Bounds", pass: insideCagePass });
+            results.push({ name: "Physics: Cage Cap Sealed on Top of Occupied Cage", pass: capSealedPass });
             isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
@@ -2969,6 +3005,7 @@
               if (t >= 1.0) {
                 activeLabThrowing = false;
                 activeLabCaptured = false;
+                placeMonsterInCage(def.obj, def.podPos, podCaps[def.podIdx], def.flies);
                 money += 10;
                 updateHudStats();
                 playChime();
@@ -3118,10 +3155,7 @@
           if (t >= 1.0) {
             throwingClown = false;
             clownInCage = true;
-            if (podCap0) {
-              podCap0.position.set(firstPodPos.x, 3.0, firstPodPos.z);
-              podCap0.rotation.set(0, 0, 0);
-            }
+            placeMonsterInCage(clown, firstPodPos, podCap0, false);
             playChime();
             objectiveEl.textContent = "🏠 The house is unlocked! Go find the abandoned house in the forest!";
           }
@@ -3137,6 +3171,7 @@
           if (t >= 1.0) {
             throwingLaser = false;
             laserInCage = true;
+            placeMonsterInCage(laserGuy, secondPodPos, podCaps[1], false);
             if (slimeGuy) slimeGuy.visible = true;
             playChime();
             objectiveEl.textContent = "🤖 Threw Laser Guy into Lab Pod 2! Now the SLIME GUY is out in the forest!";
@@ -3151,6 +3186,7 @@
           if (t >= 1.0) {
             throwingSlime = false;
             slimeInCage = true;
+            placeMonsterInCage(slimeGuy, thirdPodPos, podCaps[2], false);
             if (labMonsterDefs[0] && labMonsterDefs[0].obj) labMonsterDefs[0].obj.visible = true;
             playChime();
             objectiveEl.textContent = "🟢 Threw Slime Guy into Lab Pod 3! Next up: go catch the 🧛 Vampire in the forest!";
