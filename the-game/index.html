@@ -1719,9 +1719,9 @@
             results.push({ name: "All 21 Bad Guys Out + Bad Guys Gallery Bar", pass: Boolean(BAD_GUYS_CATALOG.length === 21 && badGuysBar && badGuysModal && allMonstersForTest.every((m) => m.visible)) });
             results.push({ name: `Dedicated Light on Every Thing (${thingLights.length} lights)`, pass: thingLights.length >= 16 });
             results.push({ name: `Every Single Bad Guy Faces Forward (${allMonstersForTest.length}/21)`, pass: Boolean(typeof faceMonsterForward === "function" && allMonstersForTest.length === 21) });
-            const hasNoHair = !gltf.scene.getObjectByName("Human_HairCap") && !gltf.scene.getObjectByName("Human_HairBang");
+            const hasSmoothHair = Boolean(gltf.scene.getObjectByName("Human_SmoothHair") && !gltf.scene.getObjectByName("Human_HairBang"));
             const hasCauldrons = Boolean(gltf.scene.getObjectByName("Lab_Cauldron_Rim_0") && gltf.scene.getObjectByName("Lab_Cauldron_Rim_10"));
-            results.push({ name: "Bald Hero (No Hair) + Lab Cauldrons + Bad Guy Zone Card", pass: Boolean(hasNoHair && hasCauldrons && zoneCardEl && labPodLights.length >= 10) });
+            results.push({ name: "Smooth Hero Hair + Lab Cauldrons + Bad Guy Zone Card", pass: Boolean(hasSmoothHair && hasCauldrons && zoneCardEl && labPodLights.length >= 10) });
             isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
