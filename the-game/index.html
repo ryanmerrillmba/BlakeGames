@@ -81,6 +81,24 @@
         cursor: pointer;
         z-index: 15;
       }
+      #minimap-wrap {
+        position: fixed;
+        bottom: 16px;
+        left: 16px;
+        background: rgba(15, 23, 42, 0.88);
+        border: 2px solid rgba(148, 163, 184, 0.45);
+        border-radius: 14px;
+        padding: 8px;
+        z-index: 14;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        text-align: center;
+      }
+      #minimap-label {
+        font-size: 0.78rem;
+        color: #cbd5e1;
+        margin-top: 4px;
+        font-weight: 700;
+      }
     </style>
     <script type="importmap">
       {
@@ -105,6 +123,11 @@
     </div>
 
     <button id="action-prompt" type="button">Action</button>
+
+    <div id="minimap-wrap">
+      <canvas id="minimap" width="170" height="170" style="border-radius:8px; display:block;"></canvas>
+      <div id="minimap-label">🗺️ Map: 🔵 You | 🔴 Monster | 🟢 Cage</div>
+    </div>
 
     <script type="module">
       import * as THREE from "three";
@@ -245,6 +268,89 @@
       const objectiveEl = document.getElementById("objective");
       const actionPromptEl = document.getElementById("action-prompt");
       const moneyHudEl = document.getElementById("money-hud");
+      const minimapCanvas = document.getElementById("minimap");
+      const mapCtx = minimapCanvas.getContext("2d");
+
+      // Glowing 3D Green Beacon Ring above whichever Cage you need to throw a monster into!
+      const cageBeacon = new THREE.Mesh(
+        new THREE.TorusGeometry(1.1, 0.12, 12, 24),
+        new THREE.MeshBasicMaterial({ color: 0x22c55e })
+      );
+      cageBeacon.rotation.x = Math.PI / 2;
+      cageBeacon.visible = false;
+      scene.add(cageBeacon);
+
+      function getActiveTargetInfo() {
+        // Returns { monsterObj, monsterLabel, cagePos, cageLabel, isCaptured }
+        if (!clownInCage && clown) return { monsterObj: clown, monsterLabel: "🤡 Clown", cagePos: firstPodPos, cageLabel: "Lab Cage 1", isCaptured: clownCaptured };
+        if (!laserInCage && laserGuy) return { monsterObj: laserGuy, monsterLabel: "🤖 Laser Guy", cagePos: secondPodPos, cageLabel: "Lab Cage 2", isCaptured: laserCaptured };
+        if (!slimeInCage && slimeGuy) return { monsterObj: slimeGuy, monsterLabel: "🟢 Slime Guy", cagePos: thirdPodPos, cageLabel: "Lab Cage 3", isCaptured: slimeCaptured };
+        if (!allLabMonstersCaged && labQueueIdx < labMonsterDefs.length) {
+          const d = labMonsterDefs[labQueueIdx];
+          return { monsterObj: d.obj, monsterLabel: d.label, cagePos: d.podPos, cageLabel: `Lab Cage ${d.podIdx + 1}`, isCaptured: activeLabCaptured };
+        }
+        if (!shadowInCage && shadowGuy) return { monsterObj: shadowGuy, monsterLabel: "👻 Flying Shadow Guy", cagePos: rareCagePos, cageLabel: "House Rare Cage 1", isCaptured: shadowCaptured };
+        if (!ghostInCage && ghostGuy) return { monsterObj: ghostGuy, monsterLabel: "👻💨 Teleporting Ghost", cagePos: rareCage2Pos, cageLabel: "House Rare Cage 2", isCaptured: ghostCaptured };
+        if (!allBossesCaged && bossIdx < houseBossDefs.length) {
+          const b = houseBossDefs[bossIdx];
+          return { monsterObj: b.obj, monsterLabel: b.label, cagePos: b.cagePos, cageLabel: `House Boss Cage ${b.cageIdx + 1}`, isCaptured: activeBossCaptured };
+        }
+        return null;
+      }
+
+      function drawMinimap() {
+        if (!player || !mapCtx) return;
+        const w = minimapCanvas.width, h = minimapCanvas.height;
+        mapCtx.fillStyle = "#0b1324";
+        mapCtx.fillRect(0, 0, w, h);
+
+        // Map world coordinates (X: -60..60, Z: -30..105) -> canvas
+        const toX = (wx) => ((wx + 60) / 120) * w;
+        const toY = (wz) => ((wz + 30) / 135) * h;
+
+        // Draw Lab (top), Dark Room (center-top), Forest (bottom), House (left forest)
+        mapCtx.fillStyle = "#1e3a2f";
+        mapCtx.fillRect(toX(-12), toY(-26), toX(12) - toX(-12), toY(-4) - toY(-26)); // Lab
+        mapCtx.fillStyle = "#334155";
+        mapCtx.fillRect(toX(-5), toY(-4), toX(5) - toX(-5), toY(4) - toY(-4)); // Dark Room
+        mapCtx.fillStyle = "#14532d";
+        mapCtx.fillRect(toX(-55), toY(4), toX(55) - toX(-55), toY(100) - toY(4)); // Forest
+        mapCtx.fillStyle = "#92400e";
+        mapCtx.fillRect(toX(-14.5), toY(23.5), toX(-5.5) - toX(-14.5), toY(32.5) - toY(23.5)); // House
+
+        // Draw Active Target Monster (pulsing RED) or Target Cage (pulsing GREEN)!
+        const info = getActiveTargetInfo();
+        const pulse = 4 + Math.sin(clock.elapsedTime * 8) * 1.8;
+        if (info) {
+          if (info.isCaptured && info.cagePos) {
+            mapCtx.fillStyle = "#22c55e";
+            mapCtx.beginPath();
+            mapCtx.arc(toX(info.cagePos.x), toY(info.cagePos.z), pulse, 0, Math.PI * 2);
+            mapCtx.fill();
+            cageBeacon.visible = true;
+            cageBeacon.position.set(info.cagePos.x, 3.4 + Math.sin(clock.elapsedTime * 5) * 0.35, info.cagePos.z);
+          } else if (info.monsterObj && info.monsterObj.visible) {
+            mapCtx.fillStyle = "#ef4444";
+            mapCtx.beginPath();
+            mapCtx.arc(toX(info.monsterObj.position.x), toY(info.monsterObj.position.z), pulse, 0, Math.PI * 2);
+            mapCtx.fill();
+            cageBeacon.visible = false;
+          } else {
+            cageBeacon.visible = false;
+          }
+        } else {
+          cageBeacon.visible = false;
+        }
+
+        // Draw Player (bright BLUE dot)
+        mapCtx.fillStyle = "#38bdf8";
+        mapCtx.beginPath();
+        mapCtx.arc(toX(player.position.x), toY(player.position.z), 4.5, 0, Math.PI * 2);
+        mapCtx.fill();
+        mapCtx.strokeStyle = "#ffffff";
+        mapCtx.lineWidth = 1.5;
+        mapCtx.stroke();
+      }
 
       // Web Audio API Sound Effects
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -870,7 +976,8 @@
         const dt = Math.min(clock.getDelta(), 0.05);
 
         if (!player) {
-          renderer.render(scene, camera);
+          drawMinimap();
+        renderer.render(scene, camera);
           return;
         }
 
@@ -1346,11 +1453,19 @@
           objectiveEl.textContent = "🔒 House is LOCKED! Put the Clown in the First cage first!";
         }
 
+        // Universal Throw Prompt for ANY captured monster near its target cage!
+        const activeInfo = getActiveTargetInfo();
+        const nearActiveCage =
+          activeInfo &&
+          activeInfo.isCaptured &&
+          activeInfo.cagePos &&
+          Math.hypot(player.position.x - activeInfo.cagePos.x, player.position.z - activeInfo.cagePos.z) < 5.0;
+
         if (level === 1 && visitedLab && !lightTurnedOn && player.position.distanceTo(switchPos) < 3.5) {
           actionPromptEl.textContent = "Press SPACEBAR / E to Turn On the Light!";
           actionPromptEl.style.display = "block";
-        } else if (clownCaptured && !clownInCage && !throwingClown && distPod < 5.0) {
-          actionPromptEl.textContent = "Press SPACEBAR to Throw the clown in!";
+        } else if (nearActiveCage) {
+          actionPromptEl.textContent = `Press SPACEBAR to Throw ${activeInfo.monsterLabel} into ${activeInfo.cageLabel}!`;
           actionPromptEl.style.display = "block";
         } else if (clownInCage && inCabin && !borrowedMoney) {
           objectiveEl.textContent = "🏚️ It's abandoned! Go back to the Clown's cage and take $10 for free!";
@@ -1398,6 +1513,7 @@
         camera.position.lerp(targetCamPos, 0.12);
         camera.lookAt(player.position.x, player.position.y + 1.0, player.position.z);
 
+        drawMinimap();
         renderer.render(scene, camera);
       }
 
