@@ -118,7 +118,10 @@
       </div>
       <div class="panel" id="controls-hint">
         <strong>Move:</strong> Click/Drag Mouse, or W A S D / Arrows<br />
-        <strong>Action:</strong> SPACEBAR / E &nbsp;|&nbsp; <strong>Doors:</strong> F
+        <strong>Action:</strong> SPACEBAR / E &nbsp;|&nbsp; <strong>Doors:</strong> F &nbsp;|&nbsp; <strong>Attack:</strong> Q
+        <div style="margin-top:6px;">
+          <button id="shop-btn" type="button" style="background:#f59e0b;color:#0f172a;border:none;border-radius:8px;padding:5px 10px;font-weight:800;cursor:pointer;">🛒 Buy Crazy Weapon ($10)</button>
+        </div>
       </div>
     </div>
 
@@ -210,9 +213,11 @@
         { key: "Monster_Robot", label: "🤖 Robot", podIdx: 11, flies: false },
         { key: "Monster_Frankenstein", label: "🧟‍♂️ Frankenstein", podIdx: 12, flies: false },
         { key: "Monster_Zombie", label: "🧟 Zombie", podIdx: 13, flies: false },
-        { key: "Monster_Werewolf", label: "🐺 Gray Werewolf", podIdx: 12, flies: false },
-        { key: "Monster_Mummy", label: "🧻 Mummy", podIdx: 13, flies: false },
+        { key: "Monster_Werewolf", label: "🐺 Gray Werewolf", podIdx: 12, loftCageIdx: 0, flies: false },
+        { key: "Monster_Mummy", label: "🧻 Mummy", podIdx: 13, loftCageIdx: 1, flies: false },
       ];
+      let onLoft = false;
+      const ladderPos = new THREE.Vector3(9.5, 0, -22.0);
 
       // 3 Super-Rare Hard-to-Find House Bosses (unlocks ONLY far in the game after Shadow Guy & Ghost!)
       const houseBossDefs = [
@@ -255,14 +260,86 @@
       let wood = 0;
       let stone = 0;
       let axeLevel = 0; // 0 = none, 1 = Lv.1 Axe + Pickaxe, 2 = Lv.2 Axe!
+      let weaponTier = 0; // 0 = none, 1 = ⚡ Shock Blaster ($10), 2 = 🔥 Flame Sword ($20), 3 = 🌈 Freeze Ray ($35)
+      let attackFlashTimer = 0;
+      let monsterStunTimer = 0;
       let borrowedMoney = false;
       let paidForMoreRoom = false;
 
+      const weaponNames = ["None", "⚡ Shock Blaster", "🔥 Flame Sword", "🌈 Freeze Ray"];
+      const weaponCosts = [0, 10, 20, 35];
+
+      // Glowing 3D Attack Blast Ring when you press Q!
+      const attackRing = new THREE.Mesh(
+        new THREE.TorusGeometry(2.6, 0.16, 12, 28),
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+      );
+      attackRing.rotation.x = Math.PI / 2;
+      attackRing.visible = false;
+      scene.add(attackRing);
+
       function updateHudStats() {
         let tools = "";
-        if (axeLevel === 1) tools = " 🪓Lv1 ⛏️";
-        if (axeLevel >= 2) tools = " 🪓Lv2 ⛏️";
+        if (axeLevel === 1) tools += " 🪓Lv1 ⛏️";
+        if (axeLevel >= 2) tools += " 🪓Lv2 ⛏️";
+        if (weaponTier > 0) tools += ` ${weaponNames[weaponTier]}`;
         moneyHudEl.textContent = `💰 $${money}  🪵${wood} 🪨${stone}${tools}`;
+        const shopBtn = document.getElementById("shop-btn");
+        if (shopBtn) {
+          if (weaponTier < 3) {
+            shopBtn.textContent = `🛒 Buy ${weaponNames[weaponTier + 1]} ($${weaponCosts[weaponTier + 1]})`;
+          } else {
+            shopBtn.textContent = "👑 MAX WEAPON: 🌈 Freeze Ray!";
+          }
+        }
+      }
+
+      document.getElementById("shop-btn").addEventListener("click", () => {
+        if (weaponTier >= 3) return;
+        const cost = weaponCosts[weaponTier + 1];
+        if (money >= cost) {
+          money -= cost;
+          weaponTier += 1;
+          updateHudStats();
+          playChime();
+          objectiveEl.textContent = `🎉 Bought ${weaponNames[weaponTier]}! Press Q to blast & stun monsters!`;
+        } else {
+          objectiveEl.textContent = `💰 Need $${cost} to buy ${weaponNames[weaponTier + 1]}! Catch monsters or chop trees/rocks!`;
+        }
+      });
+
+      function fireWeaponAttack() {
+        if (!player || weaponTier === 0) {
+          objectiveEl.textContent = "🛒 Buy a Crazy Weapon first in the top-right shop, then press Q to attack!";
+          return;
+        }
+        attackFlashTimer = 0.35;
+        monsterStunTimer = 3.0 + weaponTier * 1.5;
+        attackRing.position.set(player.position.x, player.position.y + 1.0, player.position.z);
+        attackRing.material.color.setHex(weaponTier === 1 ? 0x38bdf8 : weaponTier === 2 ? 0xf97316 : 0xc084fc);
+        attackRing.visible = true;
+        playTone(weaponTier === 1 ? 520 : weaponTier === 2 ? 260 : 780, 0.25, "sawtooth", 0.2);
+        objectiveEl.textContent = `💥 Fired ${weaponNames[weaponTier]}! Nearby monsters are STUNNED!`;
+      }
+
+      // Animate EVERY monster's arms, legs, wings, and tails!
+      function animateMonsterLimbs(root, t) {
+        if (!root || !root.visible) return;
+        const swing = Math.sin(t * 10) * 0.45;
+        root.traverse((child) => {
+          const n = child.name;
+          if (n.includes("LegL") || n.includes("Leg_L") || n.includes("ArmR") || n.includes("Arm_R") || n.includes("_FL") || n.includes("_BR")) {
+            child.rotation.x = swing;
+          } else if (n.includes("LegR") || n.includes("Leg_R") || n.includes("ArmL") || n.includes("Arm_L") || n.includes("_FR") || n.includes("_BL")) {
+            child.rotation.x = -swing;
+          } else if (n.includes("WingPivot_L") || n.includes("Wing_L")) {
+            child.rotation.z = Math.sin(t * 14) * 0.6;
+          } else if (n.includes("WingPivot_R") || n.includes("Wing_R")) {
+            child.rotation.z = -Math.sin(t * 14) * 0.6;
+          } else if (n.includes("Tail")) {
+            child.rotation.z = Math.sin(t * 8) * 0.35;
+          }
+        });
       }
 
       const objectiveEl = document.getElementById("objective");
@@ -402,10 +479,14 @@
           if (slimeGuy) slimeGuy.visible = false;
           if (shadowGuy) shadowGuy.visible = false;
           if (ghostGuy) ghostGuy.visible = false;
+          const loftGhostCage = gltf.scene.getObjectByName("Loft_Cage_Base_2") || gltf.scene.getObjectByName("House_Cage_Base_1");
+          if (loftGhostCage) rareCage2Pos.copy(loftGhostCage.position);
           for (const def of labMonsterDefs) {
             def.obj = gltf.scene.getObjectByName(def.key);
             if (def.obj) def.obj.visible = false;
-            const p = gltf.scene.getObjectByName(`Pod_Base_${def.podIdx}`);
+            const p = def.loftCageIdx !== undefined
+              ? gltf.scene.getObjectByName(`Loft_Cage_Base_${def.loftCageIdx}`)
+              : gltf.scene.getObjectByName(`Pod_Base_${def.podIdx}`);
             def.podPos = p ? p.position.clone() : new THREE.Vector3(0, 0, -15);
           }
           for (const bdef of houseBossDefs) {
@@ -640,6 +721,19 @@
       function handleAction() {
         if (!player) return;
 
+        // 0. Climb UP or DOWN the Lab Ladder to the 2nd-Floor Loft Cages!
+        const distLadder = Math.hypot(player.position.x - ladderPos.x, player.position.z - ladderPos.z);
+        if (distLadder < 3.0) {
+          onLoft = !onLoft;
+          player.position.y = onLoft ? 4.2 : 0.0;
+          player.position.z = onLoft ? -23.5 : -21.2;
+          playChime();
+          objectiveEl.textContent = onLoft
+            ? "🪜 Climbed UP the Ladder to the 2nd-Floor Loft Cages!"
+            : "🪜 Climbed DOWN the Ladder back to the Lab floor!";
+          return;
+        }
+
         // 1. Level 1: Turn on the light in the Dark Room
         const switchPos = new THREE.Vector3(-4.8, 0, 1.5);
         if (level === 1 && visitedLab && !lightTurnedOn && player.position.distanceTo(switchPos) < 3.5) {
@@ -873,6 +967,9 @@
         if (e.code === "KeyF") {
           toggleNearestDoor();
         }
+        if (e.code === "KeyQ") {
+          fireWeaponAttack();
+        }
         if (e.code === "KeyE" || e.code === "Space") {
           if (e.code === "Space") e.preventDefault();
           handleAction();
@@ -976,7 +1073,24 @@
         const dt = Math.min(clock.getDelta(), 0.05);
 
         if (!player) {
-          drawMinimap();
+          // Update weapon attack ring flash & stun timer + animate EVERY visible monster's limbs!
+        if (attackFlashTimer > 0) {
+          attackFlashTimer -= dt;
+          attackRing.scale.setScalar(1.0 + (0.35 - attackFlashTimer) * 4.0);
+          if (attackFlashTimer <= 0) {
+            attackRing.visible = false;
+            attackRing.scale.setScalar(1.0);
+          }
+        }
+        if (monsterStunTimer > 0) monsterStunTimer -= dt;
+        const animT = clock.elapsedTime;
+        animateMonsterLimbs(clown, animT);
+        animateMonsterLimbs(laserGuy, animT);
+        animateMonsterLimbs(shadowGuy, animT);
+        for (const d of labMonsterDefs) animateMonsterLimbs(d.obj, animT);
+        for (const b of houseBossDefs) animateMonsterLimbs(b.obj, animT);
+
+        drawMinimap();
         renderer.render(scene, camera);
           return;
         }
@@ -1461,7 +1575,12 @@
           activeInfo.cagePos &&
           Math.hypot(player.position.x - activeInfo.cagePos.x, player.position.z - activeInfo.cagePos.z) < 5.0;
 
-        if (level === 1 && visitedLab && !lightTurnedOn && player.position.distanceTo(switchPos) < 3.5) {
+        const distLadderNow = Math.hypot(player.position.x - ladderPos.x, player.position.z - ladderPos.z);
+
+        if (distLadderNow < 3.0) {
+          actionPromptEl.textContent = onLoft ? "🪜 Press SPACEBAR / E to Climb DOWN the Ladder!" : "🪜 Press SPACEBAR / E to Climb UP the Ladder!";
+          actionPromptEl.style.display = "block";
+        } else if (level === 1 && visitedLab && !lightTurnedOn && player.position.distanceTo(switchPos) < 3.5) {
           actionPromptEl.textContent = "Press SPACEBAR / E to Turn On the Light!";
           actionPromptEl.style.display = "block";
         } else if (nearActiveCage) {
@@ -1512,6 +1631,23 @@
         );
         camera.position.lerp(targetCamPos, 0.12);
         camera.lookAt(player.position.x, player.position.y + 1.0, player.position.z);
+
+        // Update weapon attack ring flash & stun timer + animate EVERY visible monster's limbs!
+        if (attackFlashTimer > 0) {
+          attackFlashTimer -= dt;
+          attackRing.scale.setScalar(1.0 + (0.35 - attackFlashTimer) * 4.0);
+          if (attackFlashTimer <= 0) {
+            attackRing.visible = false;
+            attackRing.scale.setScalar(1.0);
+          }
+        }
+        if (monsterStunTimer > 0) monsterStunTimer -= dt;
+        const animT = clock.elapsedTime;
+        animateMonsterLimbs(clown, animT);
+        animateMonsterLimbs(laserGuy, animT);
+        animateMonsterLimbs(shadowGuy, animT);
+        for (const d of labMonsterDefs) animateMonsterLimbs(d.obj, animT);
+        for (const b of houseBossDefs) animateMonsterLimbs(b.obj, animT);
 
         drawMinimap();
         renderer.render(scene, camera);
