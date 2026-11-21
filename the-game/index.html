@@ -1760,6 +1760,19 @@
               colliders.push({ name: n, category, box, mesh: obj, active: true });
             }
           });
+
+          // Invisible Physics Barriers along ALL edges of the green forest (Outside_Ground: X[-100,100], Z[4,204])
+          const forestBarriers = [
+            { name: "Forest_Boundary_West", min: [-101.5, -1, 4.0], max: [-99.2, 12, 204.0] },
+            { name: "Forest_Boundary_East", min: [99.2, -1, 4.0], max: [101.5, 12, 204.0] },
+            { name: "Forest_Boundary_South", min: [-101.5, -1, 203.2], max: [101.5, 12, 205.5] },
+            { name: "Forest_Boundary_North_Left", min: [-101.5, -1, 3.0], max: [-5.0, 12, 4.2] },
+            { name: "Forest_Boundary_North_Right", min: [5.0, -1, 3.0], max: [101.5, 12, 4.2] },
+          ];
+          for (const fb of forestBarriers) {
+            const box = new THREE.Box3(new THREE.Vector3(...fb.min), new THREE.Vector3(...fb.max));
+            colliders.push({ name: fb.name, category: "wall", box, mesh: null, active: true });
+          }
           if (podCap0) {
             podCap0.position.set(firstPodPos.x + 1.2, 0.35, firstPodPos.z + 1.4);
           }
@@ -1976,6 +1989,44 @@
             results.push({ name: "3D Weapon Trigger VFX + Unique Weapon SFX (All 4 Tiers)", pass: weaponVfxPass });
             const hasHamburger = Boolean(hamburgerBtn && hamburgerMenu && hamburgerMenu.contains(badGuysBar));
             results.push({ name: "Hamburger Menu (Controls, Weapons & 21 Bad Guys)", pass: hasHamburger });
+
+            // Permanent Test: Lab South Wall (Left & Right of Dark Room at Z = -4.0) blocks player & monsters!
+            player.position.set(-8.5, 0, -6.0);
+            for (let i = 0; i < 40; i++) movePlayer(0, 1, 0.05);
+            const labSouthLeftBlocked = player.position.z < -4.0;
+            player.position.set(8.5, 0, -6.0);
+            for (let i = 0; i < 40; i++) movePlayer(0, 1, 0.05);
+            const labSouthRightBlocked = player.position.z < -4.0;
+            let labSouthMonsterBlocked = true;
+            if (clown) {
+              const cSaved = clown.position.clone();
+              clown.position.set(-8.5, 0, -6.0);
+              for (let i = 0; i < 40; i++) moveMonsterSafe(clown, 0, 0.3);
+              labSouthMonsterBlocked = clown.position.z < -4.0;
+              clown.position.copy(cSaved);
+            }
+            results.push({
+              name: "Lab South Wall Blocks Player & Monsters (Left & Right)",
+              pass: Boolean(labSouthLeftBlocked && labSouthRightBlocked && labSouthMonsterBlocked)
+            });
+
+            // Permanent Test: Invisible Forest Boundary Barriers block all 4 edges of the green forest!
+            player.position.set(-97.0, 0, 50.0);
+            for (let i = 0; i < 40; i++) movePlayer(-1, 0, 0.05);
+            const westBlocked = player.position.x > -99.3;
+            player.position.set(97.0, 0, 50.0);
+            for (let i = 0; i < 40; i++) movePlayer(1, 0, 0.05);
+            const eastBlocked = player.position.x < 99.3;
+            player.position.set(0.0, 0, 201.0);
+            for (let i = 0; i < 40; i++) movePlayer(0, 1, 0.05);
+            const southBlocked = player.position.z < 203.3;
+            player.position.set(-25.0, 0, 6.0);
+            for (let i = 0; i < 40; i++) movePlayer(0, -1, 0.05);
+            const northForestBlocked = player.position.z > 4.1;
+            results.push({
+              name: "Invisible Forest Boundary Blocks All 4 Edges",
+              pass: Boolean(westBlocked && eastBlocked && southBlocked && northForestBlocked)
+            });
             isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
@@ -2402,8 +2453,8 @@
         // Flip human forward! (In glTF from Blender, face & flashlight are on local -Z)
         player.rotation.y = Math.atan2(-nx, -nz);
 
-        const maxZ = 195.0;
-        const maxX = player.position.z > 4.0 ? 95.0 : 11.3;
+        const maxZ = 204.5;
+        const maxX = player.position.z > 4.0 ? 100.5 : 12.2;
 
         const nextX = THREE.MathUtils.clamp(player.position.x + nx * speed * dt, -maxX, maxX);
         const hitX = getCollisionAt(nextX, player.position.z);
@@ -2450,8 +2501,8 @@
       function moveMonsterSafe(monsterObj, stepX, stepZ, opts = {}) {
         if (!monsterObj) return false;
         const radius = opts.radius || MONSTER_RADIUS;
-        const maxZ = 195.0;
-        const maxX = monsterObj.position.z > 4.0 ? 95.0 : 11.3;
+        const maxZ = 204.5;
+        const maxX = monsterObj.position.z > 4.0 ? 100.5 : 12.2;
         let moved = false;
 
         // Axis-separated sliding collision physics (never clips through walls or trees!)
