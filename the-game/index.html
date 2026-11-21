@@ -100,7 +100,7 @@
       </div>
       <div class="panel" id="controls-hint">
         <strong>Move:</strong> Click/Drag Mouse, or W A S D / Arrows<br />
-        <strong>Action:</strong> SPACEBAR or E (or click yellow button)
+        <strong>Action:</strong> SPACEBAR / E &nbsp;|&nbsp; <strong>Doors:</strong> F
       </div>
     </div>
 
@@ -151,10 +151,58 @@
       let clown = null;
       let clownLegL = null, clownLegR = null;
       let laserGuy = null;
+      let laserLegL = null, laserLegR = null;
+      let laserBeam = null;
+      let laserTimer = 0;
+      let laserActive = 0;
+      let laserCaptured = false;
+      let throwingLaser = false;
+      let laserInCage = false;
+      let laserMoneyTaken = false;
+      let slimeGuy = null;
+      let slimeCaptured = false;
+      let throwingSlime = false;
+      let slimeInCage = false;
+      let slimeMoneyTaken = false;
+      let shadowGuy = null;
+      let shadowCaptured = false;
+      let throwingShadow = false;
+      let shadowInCage = false;
+      let ghostGuy = null;
+      let ghostCaptured = false;
+      let throwingGhost = false;
+      let ghostInCage = false;
+      let ghostTeleportTimer = 0;
+
+      // 9 Lab Monsters queue (Pods 4..12) unlocked one by one after Slime Guy!
+      const labMonsterDefs = [
+        { key: "Monster_Vampire", label: "🧛 Vampire", podIdx: 3, flies: false },
+        { key: "Monster_Witch", label: "🧙 Witch", podIdx: 4, flies: true },
+        { key: "Monster_Pumpkin", label: "🎃 Pumpkin", podIdx: 5, flies: false },
+        { key: "Monster_Cat", label: "🐈‍⬛ Cat", podIdx: 6, flies: false },
+        { key: "Monster_Bat", label: "🦇 Bat", podIdx: 7, flies: true },
+        { key: "Monster_Spider", label: "🕷️ Spider", podIdx: 8, flies: false },
+        { key: "Monster_Skeleton", label: "💀 Skeleton", podIdx: 9, flies: false },
+        { key: "Monster_Eyeball", label: "👁️ Magical Eyeball", podIdx: 10, flies: true },
+        { key: "Monster_Robot", label: "🤖 Robot", podIdx: 11, flies: false },
+        { key: "Monster_Frankenstein", label: "🧟‍♂️ Frankenstein", podIdx: 12, flies: false },
+        { key: "Monster_Zombie", label: "🧟 Zombie", podIdx: 13, flies: false },
+      ];
+      let labQueueIdx = 0; // active monster in labMonsterDefs after slimeInCage
+      let activeLabCaptured = false;
+      let activeLabThrowing = false;
+      let allLabMonstersCaged = false;
       let podCap0 = null;
+      let craftTableObj = null;
+      let portalObjRef = null;
       let firstPodPos = new THREE.Vector3(-9.0, 0, -9.0);
-      const colliders = []; // { name, category, box }
-      const PLAYER_RADIUS = 0.42;
+      let secondPodPos = new THREE.Vector3(-4.5, 0, -10.5); // Laser Guy goes next to Clown in Lab!
+      let thirdPodPos = new THREE.Vector3(0.0, 0, -10.0);   // Slime Guy goes next to Laser Guy in Lab!
+      let rareCagePos = new THREE.Vector3(-12.6, 0, 30.8);  // Rare Shadow Guy goes in House Cage 1!
+      let rareCage2Pos = new THREE.Vector3(-10.0, 0, 30.8); // Rare Ghost goes in House Cage 2!
+      const colliders = []; // { name, category, box, mesh, active }
+      const doorPivots = []; // { obj, openAngle, closedAngle, isOpen }
+      const PLAYER_RADIUS = 0.30;
 
       let walkTime = 0;
       let stepTimer = 0;
@@ -168,8 +216,18 @@
       let throwStartPos = new THREE.Vector3();
       let clownInCage = false;
       let money = 0;
+      let wood = 0;
+      let stone = 0;
+      let axeLevel = 0; // 0 = none, 1 = Lv.1 Axe + Pickaxe, 2 = Lv.2 Axe!
       let borrowedMoney = false;
       let paidForMoreRoom = false;
+
+      function updateHudStats() {
+        let tools = "";
+        if (axeLevel === 1) tools = " 🪓Lv1 ⛏️";
+        if (axeLevel >= 2) tools = " 🪓Lv2 ⛏️";
+        moneyHudEl.textContent = `💰 $${money}  🪵${wood} 🪨${stone}${tools}`;
+      }
 
       const objectiveEl = document.getElementById("objective");
       const actionPromptEl = document.getElementById("action-prompt");
@@ -199,10 +257,10 @@
         setTimeout(() => playTone(783.99, 0.25, "triangle", 0.18), 240);
       }
 
-      // Load Blender scene.glb
+      // Load Blender scene.glb (cache-busted so newest Blender export always loads!)
       const loader = new GLTFLoader();
       loader.load(
-        "./scene.glb",
+        "./scene.glb?v=" + Date.now(),
         (gltf) => {
           scene.add(gltf.scene);
           player = gltf.scene.getObjectByName("Player_Human");
@@ -215,9 +273,44 @@
           clownLegL = gltf.scene.getObjectByName("Clown_Leg_L");
           clownLegR = gltf.scene.getObjectByName("Clown_Leg_R");
           laserGuy = gltf.scene.getObjectByName("Monster_LaserGuy");
+          laserLegL = gltf.scene.getObjectByName("Laser_Leg_L");
+          laserLegR = gltf.scene.getObjectByName("Laser_Leg_R");
+          slimeGuy = gltf.scene.getObjectByName("Monster_SlimeGuy");
+          shadowGuy = gltf.scene.getObjectByName("Monster_ShadowGuy");
+          ghostGuy = gltf.scene.getObjectByName("Monster_Ghost");
+          // Only Clown is out first! Others come out strictly when it's their turn!
+          if (laserGuy) laserGuy.visible = false;
+          if (slimeGuy) slimeGuy.visible = false;
+          if (shadowGuy) shadowGuy.visible = false;
+          if (ghostGuy) ghostGuy.visible = false;
+          for (const def of labMonsterDefs) {
+            def.obj = gltf.scene.getObjectByName(def.key);
+            if (def.obj) def.obj.visible = false;
+            const p = gltf.scene.getObjectByName(`Pod_Base_${def.podIdx}`);
+            def.podPos = p ? p.position.clone() : new THREE.Vector3(0, 0, -15);
+          }
+
           podCap0 = gltf.scene.getObjectByName("Pod_Cap_0");
+          craftTableObj = gltf.scene.getObjectByName("Cabin_Crafting_Table");
+          portalObjRef = gltf.scene.getObjectByName("Cabin_Teleporter_Portal");
           const pod0 = gltf.scene.getObjectByName("Pod_Base_0");
           if (pod0) firstPodPos.copy(pod0.position);
+          const pod1 = gltf.scene.getObjectByName("Pod_Base_1");
+          if (pod1) secondPodPos.copy(pod1.position);
+          const pod2 = gltf.scene.getObjectByName("Pod_Base_2");
+          if (pod2) thirdPodPos.copy(pod2.position);
+          const rare0 = gltf.scene.getObjectByName("House_Cage_Base_0");
+          if (rare0) rareCagePos.copy(rare0.position);
+          const rare1 = gltf.scene.getObjectByName("House_Cage_Base_1");
+          if (rare1) rareCage2Pos.copy(rare1.position);
+
+          // Glowing red laser beam for Red Laser Guy
+          const beamGeo = new THREE.CylinderGeometry(0.08, 0.08, 16, 8);
+          beamGeo.rotateX(Math.PI / 2);
+          beamGeo.translate(0, 0, 8);
+          laserBeam = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ color: 0xff1122 }));
+          laserBeam.visible = false;
+          scene.add(laserBeam);
 
           // Add a visible glowing beam cone right onto the tip of the flashlight in his hand!
           if (flashlightMesh) {
@@ -236,9 +329,17 @@
             flashlightMesh.add(beamCone);
           }
 
-          // Put lids on all cages except First Cage (Pod_Cap_0) and build solid colliders
+          // Put lids on all cages except First Cage (Pod_Cap_0), collect door pivots, and build solid colliders
           gltf.scene.updateMatrixWorld(true);
           gltf.scene.traverse((obj) => {
+            if (obj.name.startsWith("Door_Pivot_") || obj.name === "Cabin_Door_Pivot") {
+              doorPivots.push({
+                obj,
+                openAngle: obj.rotation.y,
+                closedAngle: 0,
+                isOpen: true,
+              });
+            }
             if (obj.name.startsWith("Pod_Cap_") && obj.name !== "Pod_Cap_0") {
               obj.position.y = 3.0;
               obj.rotation.set(0, 0, 0);
@@ -248,12 +349,12 @@
             let category = null;
             if (n.includes("Wall") && !n.includes("Top")) category = "wall";
             else if (n.includes("Trunk")) category = "tree";
-            else if (n.startsWith("Pod_Base_") || n.startsWith("Forest_Rock_") || n.startsWith("Lab_Table_") || n.startsWith("Abandoned_Crate_") || n.startsWith("Borrow_Money_Desk")) {
+            else if (n.startsWith("Pod_Base_") || n.startsWith("House_Cage_Base_") || n.startsWith("Forest_Rock_") || n.startsWith("Lab_Table_") || n.startsWith("Abandoned_Crate_") || n.startsWith("Borrow_Money_Desk")) {
               category = "object";
             }
             if (category) {
               const box = new THREE.Box3().setFromObject(obj);
-              colliders.push({ name: n, category, box });
+              colliders.push({ name: n, category, box, mesh: obj, active: true });
             }
           });
           if (podCap0) {
@@ -281,8 +382,9 @@
             camera.lookAt(player.position.x, player.position.y + 1.0, player.position.z);
           }
 
-          // Built-in automated collision & facing test suite when ?autotest=1 is passed
-          if (new URLSearchParams(window.location.search).get("autotest") === "1") {
+          // Built-in automated collision & house test suite when ?autotest=1 or ?test=house
+          const params = new URLSearchParams(window.location.search);
+          if (params.get("autotest") === "1" || params.get("test") === "house") {
             const results = [];
             const origX = player.position.x, origZ = player.position.z, origRot = player.rotation.y;
 
@@ -320,10 +422,45 @@
             }
             results.push({ name: "Blocks Solid Objects", pass: podPass });
 
-            // Restore player
-            level = 1;
-            player.position.set(origX, 0, origZ);
-            player.rotation.y = origRot;
+            // Test 5: Can Exit Dark Room into Lab, Exit into Forest, & Enter/Exit House
+            const craftObj = gltf.scene.getObjectByName("Cabin_Crafting_Table");
+            const portalObj = gltf.scene.getObjectByName("Cabin_Teleporter_Portal");
+            const cabinDoorObj = gltf.scene.getObjectByName("Cabin_Door");
+            const laserObj = gltf.scene.getObjectByName("Monster_LaserGuy");
+            // Walk out of Dark Room into Lab through left doorway (x = -2.2)
+            player.position.set(-2.2, 0, 1.5);
+            for (let i = 0; i < 30; i++) movePlayer(0, -1, 0.05);
+            const exitedToLab = player.position.z < -5.0;
+            // Walk out of Dark Room into Forest through left outside doorway (x = -2.2)
+            player.position.set(-2.2, 0, 1.5);
+            for (let i = 0; i < 30; i++) movePlayer(0, 1, 0.05);
+            const exitedToForest = player.position.z > 6.0;
+            // Enter & Exit Bigger 9x9 House (doorway at z = 23.6)
+            player.position.set(-10.0, 0, 22.0);
+            for (let i = 0; i < 25; i++) movePlayer(0, 1, 0.05);
+            const enteredHouse = player.position.z > 24.8;
+            for (let i = 0; i < 25; i++) movePlayer(0, -1, 0.05);
+            const exitedHouse = player.position.z < 22.5;
+            results.push({ name: "Never Stuck (Can Exit Room & House)", pass: Boolean(exitedToLab && exitedToForest && enteredHouse && exitedHouse) });
+            results.push({ name: "House Door + Crafting Table + Portal + 3 Cages", pass: Boolean(craftObj && portalObj && cabinDoorObj && gltf.scene.getObjectByName("House_Cage_Base_0")) });
+            results.push({ name: "Red Laser Guy Far Away in Forest", pass: Boolean(laserObj && laserObj.position.z > 40) });
+
+            // Restore player (or stay in House if ?test=house)
+            if (new URLSearchParams(window.location.search).get("test") === "house") {
+              level = 2;
+              clownInCage = true;
+              borrowedMoney = true;
+              paidForMoreRoom = true;
+              player.position.set(-10.0, 0, 26.8);
+              player.rotation.y = Math.PI;
+              camera.position.set(-10.0, 10.5, 36.0);
+              camera.lookAt(-10.0, 1.0, 28.0);
+              objectiveEl.textContent = "🏠 Bigger House! Crafting Table, Glowing Portal, 3 Extra Cages & Press F to move doors!";
+            } else {
+              level = 1;
+              player.position.set(origX, 0, origZ);
+              player.rotation.y = origRot;
+            }
 
             const allPass = results.every((r) => r.pass);
             const badge = document.createElement("div");
@@ -413,33 +550,191 @@
           return;
         }
 
-        // 4. Inside Abandoned House: Pay $10 or use Teleporter!
+        // 4. Inside Bigger 9x9 Abandoned House: Pay $10, Craft Tool, Put Laser Guy in Cage, or Teleport!
         const inCabin =
-          player.position.x > -12.8 &&
-          player.position.x < -7.2 &&
-          player.position.z > 25.2 &&
-          player.position.z < 30.8;
+          player.position.x > -14.5 &&
+          player.position.x < -5.5 &&
+          player.position.z > 23.5 &&
+          player.position.z < 32.5;
 
         if (clownInCage && inCabin && borrowedMoney && !paidForMoreRoom && money >= 10) {
           paidForMoreRoom = true;
           money -= 10;
-          moneyHudEl.textContent = `💰 $${money}`;
+          updateHudStats();
           playChime();
-          objectiveEl.textContent = "🔨 House Fixed! More Cauldrons, Crafting Table & Teleporter UNLOCKED!";
+          objectiveEl.textContent = "🔨 House Fixed! Use the Crafting Table to craft your Axe & Pickaxe!";
           return;
         }
 
-        if (paidForMoreRoom && inCabin) {
-          player.position.set(0, 0, -10.0);
-          playChime();
+        // Throw captured Laser Guy into Pod 2 (right next to the Clown in the Lab!)
+        const distPod2 = Math.hypot(player.position.x - secondPodPos.x, player.position.z - secondPodPos.z);
+        if (laserCaptured && !laserInCage && !throwingLaser && laserGuy && distPod2 < 4.5) {
+          throwingLaser = true;
+          throwProgress = 0;
+          throwStartPos.copy(laserGuy.position);
           actionPromptEl.style.display = "none";
-          objectiveEl.textContent = "🌀 Teleported back into the Real Lab!";
+          playTone(350, 0.2, "sine", 0.2);
+          return;
+        }
+
+        // Collect $10 from Laser Guy (needs Lv.1 Axe!)
+        if (laserInCage && !laserMoneyTaken && distPod2 < 4.5) {
+          if (axeLevel >= 1) {
+            laserMoneyTaken = true;
+            money += 10;
+            updateHudStats();
+            playChime();
+            objectiveEl.textContent = "💰 Got $10 from the Laser Guy! Now find the green Slime Guy in the forest!";
+          } else {
+            objectiveEl.textContent = "🪓 Craft a Lv.1 Axe at the Crafting Table first to get $10 from the Laser Guy!";
+          }
+          return;
+        }
+
+        // Throw captured Slime Guy into Pod 3 (right next to the Laser Guy in the Lab!)
+        const distPod3 = Math.hypot(player.position.x - thirdPodPos.x, player.position.z - thirdPodPos.z);
+        if (slimeCaptured && !slimeInCage && !throwingSlime && slimeGuy && distPod3 < 4.5) {
+          throwingSlime = true;
+          throwProgress = 0;
+          throwStartPos.copy(slimeGuy.position);
+          actionPromptEl.style.display = "none";
+          playTone(350, 0.2, "sine", 0.2);
+          return;
+        }
+
+        // Collect $10 from Slime Guy (needs Lv.2 Axe!)
+        if (slimeInCage && !slimeMoneyTaken && distPod3 < 4.5) {
+          if (axeLevel >= 2) {
+            slimeMoneyTaken = true;
+            money += 10;
+            updateHudStats();
+            playChime();
+            objectiveEl.textContent = "💰 Got $10 from the Slime Guy! Watch out—the RARE SHADOW GUY is now out in the forest!";
+          } else {
+            objectiveEl.textContent = "🪓 Craft a Lv.2 Axe (2 Wood + 1 Stone) at the Crafting Table to get $10 from the Slime Guy!";
+          }
+          return;
+        }
+
+        // Throw active Lab Queue Monster (Vampire..Robot) into its Lab Pod!
+        if (slimeInCage && !allLabMonstersCaged && activeLabCaptured && !activeLabThrowing) {
+          const def = labMonsterDefs[labQueueIdx];
+          if (def && def.obj && Math.hypot(player.position.x - def.podPos.x, player.position.z - def.podPos.z) < 4.8) {
+            activeLabThrowing = true;
+            throwProgress = 0;
+            throwStartPos.copy(def.obj.position);
+            actionPromptEl.style.display = "none";
+            playTone(360, 0.2, "sine", 0.2);
+            return;
+          }
+        }
+
+        // Throw captured RARE Shadow Guy into House Cage 1!
+        const distRare = Math.hypot(player.position.x - rareCagePos.x, player.position.z - rareCagePos.z);
+        if (shadowCaptured && !shadowInCage && !throwingShadow && shadowGuy && distRare < 4.5) {
+          throwingShadow = true;
+          throwProgress = 0;
+          throwStartPos.copy(shadowGuy.position);
+          actionPromptEl.style.display = "none";
+          playTone(350, 0.2, "sine", 0.2);
+          return;
+        }
+
+        // Throw captured TELEPORTING GHOST into House Cage 2!
+        const distRare2 = Math.hypot(player.position.x - rareCage2Pos.x, player.position.z - rareCage2Pos.z);
+        if (ghostCaptured && !ghostInCage && !throwingGhost && ghostGuy && distRare2 < 4.5) {
+          throwingGhost = true;
+          throwProgress = 0;
+          throwStartPos.copy(ghostGuy.position);
+          actionPromptEl.style.display = "none";
+          playTone(420, 0.2, "sine", 0.2);
+          return;
+        }
+
+        // Use Crafting Table inside House: Craft Lv.1 Axe & Pickaxe -> Craft Lv.2 Axe -> Build Wooden Block!
+        if (clownInCage && craftTableObj) {
+          const distCraft = Math.hypot(player.position.x - craftTableObj.position.x, player.position.z - craftTableObj.position.z);
+          if (distCraft < 2.8) {
+            if (axeLevel === 0) {
+              axeLevel = 1;
+              updateHudStats();
+              playChime();
+              objectiveEl.textContent = "🪓⛏️ Crafted Lv.1 Axe & Pickaxe! Chop trees & rocks for Wood & Stone!";
+              return;
+            } else if (axeLevel === 1 && wood >= 2 && stone >= 1) {
+              wood -= 2;
+              stone -= 1;
+              axeLevel = 2;
+              updateHudStats();
+              playChime();
+              objectiveEl.textContent = "🪓✨ Crafted LEVEL 2 AXE! Now you can get $10 from the Slime Guy!";
+              return;
+            } else if (axeLevel >= 1 && wood >= 1) {
+              wood -= 1;
+              updateHudStats();
+              // Build a solid wooden crate right in front of the player!
+              const bx = player.position.x - Math.sin(player.rotation.y) * 1.5;
+              const bz = player.position.z - Math.cos(player.rotation.y) * 1.5;
+              const block = new THREE.Mesh(
+                new THREE.BoxGeometry(1.1, 1.1, 1.1),
+                new THREE.MeshStandardMaterial({ color: 0xa16207, roughness: 0.8 })
+              );
+              block.position.set(bx, 0.55, bz);
+              scene.add(block);
+              colliders.push({ name: "Built_Block", category: "object", box: new THREE.Box3().setFromObject(block), mesh: block, active: true });
+              playChime();
+              objectiveEl.textContent = "🧱 Built a Wooden Block using your Crafting Table!";
+              return;
+            } else {
+              objectiveEl.textContent = "🪵 Chop 2 Trees & 1 Rock outside to craft your Level 2 Axe!";
+              return;
+            }
+          }
+        }
+
+        // Teleport back to Real Lab when near the Glowing Portal!
+        if (paidForMoreRoom && portalObjRef) {
+          const distPortal = Math.hypot(player.position.x - portalObjRef.position.x, player.position.z - portalObjRef.position.z);
+          if (distPortal < 2.6) {
+            player.position.set(0, 0, -10.0);
+            playChime();
+            actionPromptEl.style.display = "none";
+            objectiveEl.textContent = "🌀 Teleported back into the Real Lab!";
+            return;
+          }
+        }
+
+        // 5. Chop down Trees (Wood) & Rocks (Stone) in the forest once the House is unlocked!
+        if (clownInCage) {
+          const choppable = findChoppableNearPlayer();
+          if (choppable) {
+            choppable.active = false;
+            choppable.mesh.visible = false;
+            if (choppable.name.includes("Trunk")) {
+              const leavesName = choppable.name.replace("Trunk", "Leaves");
+              const leavesObj = scene.getObjectByName(leavesName);
+              if (leavesObj) leavesObj.visible = false;
+              wood += 1;
+            } else {
+              stone += 1;
+            }
+            money += 2;
+            updateHudStats();
+            playTone(140, 0.14, "sawtooth", 0.18);
+            objectiveEl.textContent = choppable.category === "tree"
+              ? "🪓 Chopped a Tree! (+1 🪵 Wood, +$2)"
+              : "⛏️ Mined a Rock! (+1 🪨 Stone, +$2)";
+            return;
+          }
         }
       }
 
       window.addEventListener("keydown", (e) => {
         keys[e.code] = true;
         mouseTarget = null;
+        if (e.code === "KeyF") {
+          toggleNearestDoor();
+        }
         if (e.code === "KeyE" || e.code === "Space") {
           if (e.code === "Space") e.preventDefault();
           handleAction();
@@ -458,6 +753,7 @@
 
       function collidesAt(x, z) {
         for (let i = 0; i < colliders.length; i++) {
+          if (!colliders[i].active) continue;
           const b = colliders[i].box;
           if (
             x + PLAYER_RADIUS > b.min.x &&
@@ -471,6 +767,46 @@
         return false;
       }
 
+      function toggleNearestDoor() {
+        if (!player) return false;
+        let best = null;
+        let bestDist = 3.6;
+        const pos = new THREE.Vector3();
+        for (const d of doorPivots) {
+          d.obj.getWorldPosition(pos);
+          const dist = Math.hypot(player.position.x - pos.x, player.position.z - pos.z);
+          if (dist < bestDist) {
+            bestDist = dist;
+            best = d;
+          }
+        }
+        if (best) {
+          best.isOpen = !best.isOpen;
+          best.obj.rotation.y = best.isOpen ? best.openAngle : best.closedAngle;
+          playTone(best.isOpen ? 320 : 180, 0.12, "square", 0.12);
+          return true;
+        }
+        return false;
+      }
+
+      function findChoppableNearPlayer() {
+        if (!player) return null;
+        let best = null;
+        let bestDist = 2.8;
+        for (const c of colliders) {
+          if (!c.active) continue;
+          if (c.category !== "tree" && !c.name.startsWith("Forest_Rock_")) continue;
+          const cx = (c.box.min.x + c.box.max.x) / 2;
+          const cz = (c.box.min.z + c.box.max.z) / 2;
+          const dist = Math.hypot(player.position.x - cx, player.position.z - cz);
+          if (dist < bestDist) {
+            bestDist = dist;
+            best = c;
+          }
+        }
+        return best;
+      }
+
       function movePlayer(dx, dz, dt) {
         const speed = 6.5;
         const len = Math.hypot(dx, dz);
@@ -481,8 +817,8 @@
         // Flip human forward! (In glTF from Blender, face & flashlight are on local -Z)
         player.rotation.y = Math.atan2(-nx, -nz);
 
-        const maxZ = level === 2 ? 195.0 : 3.3;
-        const maxX = level === 2 && player.position.z > 4.0 ? 95.0 : 11.3;
+        const maxZ = 195.0;
+        const maxX = player.position.z > 4.0 ? 95.0 : 11.3;
 
         const nextX = THREE.MathUtils.clamp(player.position.x + nx * speed * dt, -maxX, maxX);
         if (!collidesAt(nextX, player.position.z)) {
@@ -559,9 +895,217 @@
           flashlight.position.z + forwardZ * 8
         );
 
-        // Laser Guy patrols far out in the forest (doesn't shoot yet)
-        if (laserGuy) {
-          laserGuy.rotation.y += dt * 0.8;
+        // Laser Guy ONLY active after Clown is caged! Once captured/caged, NO lasers!
+        if (laserBeam && (laserCaptured || laserInCage || !clownInCage)) {
+          laserBeam.visible = false;
+        }
+        if (laserGuy && laserBeam && clownInCage && !laserInCage && !throwingLaser) {
+          laserGuy.visible = true;
+          if (laserCaptured) {
+            const tx = player.position.x - forwardX * 1.8;
+            const tz = player.position.z - forwardZ * 1.8;
+            const moveDist = Math.hypot(tx - laserGuy.position.x, tz - laserGuy.position.z);
+            laserGuy.position.x += (tx - laserGuy.position.x) * 0.1;
+            laserGuy.position.z += (tz - laserGuy.position.z) * 0.1;
+            laserGuy.rotation.y = player.rotation.y;
+            if (moveDist > 0.15) {
+              const lSwing = Math.sin(clock.elapsedTime * 12) * 0.6;
+              if (laserLegL) laserLegL.rotation.x = lSwing;
+              if (laserLegR) laserLegR.rotation.x = -lSwing;
+            } else {
+              if (laserLegL) laserLegL.rotation.x *= 0.8;
+              if (laserLegR) laserLegR.rotation.x *= 0.8;
+            }
+            laserBeam.visible = false;
+          } else {
+            const dxL = player.position.x - laserGuy.position.x;
+            const dzL = player.position.z - laserGuy.position.z;
+            const distL = Math.hypot(dxL, dzL);
+            if (distL < 2.2) {
+              laserCaptured = true;
+              laserBeam.visible = false;
+              playChime();
+              objectiveEl.textContent = "🤖 You caught the Laser Guy! Bring him to Lab Pod 2 (next to the Clown) and throw him in!";
+            } else if (distL < 18.0) {
+              laserGuy.rotation.y = Math.atan2(dxL, dzL);
+              laserTimer += dt;
+              if (laserTimer > 2.0) {
+                laserTimer = 0;
+                laserActive = 0.35;
+                laserBeam.position.set(laserGuy.position.x, 1.35, laserGuy.position.z);
+                laserBeam.rotation.y = laserGuy.rotation.y;
+                laserBeam.visible = true;
+                playTone(180, 0.25, "sawtooth", 0.2);
+                if (distL < 15.0) {
+                  player.position.x += (dxL / distL) * 1.6;
+                  player.position.z += (dzL / distL) * 1.6;
+                  objectiveEl.textContent = "⚡ Zapped by Laser Guy! Dodge & catch him!";
+                }
+              }
+            } else {
+              laserGuy.rotation.y += dt * 0.8;
+            }
+            if (laserActive > 0) {
+              laserActive -= dt;
+              if (laserActive <= 0) laserBeam.visible = false;
+            }
+          }
+        }
+
+        // Slime Guy ONLY active after Laser Guy is caged!
+        if (slimeGuy && laserInCage && !slimeInCage && !throwingSlime) {
+          slimeGuy.visible = true;
+          slimeGuy.scale.y = 1.0 + Math.sin(clock.elapsedTime * 5) * 0.12;
+          if (slimeCaptured) {
+            const tx = player.position.x - forwardX * 2.0;
+            const tz = player.position.z - forwardZ * 2.0;
+            slimeGuy.position.x += (tx - slimeGuy.position.x) * 0.1;
+            slimeGuy.position.z += (tz - slimeGuy.position.z) * 0.1;
+            slimeGuy.rotation.y = player.rotation.y;
+          } else {
+            const dxS = slimeGuy.position.x - player.position.x;
+            const dzS = slimeGuy.position.z - player.position.z;
+            const distS = Math.hypot(dxS, dzS);
+            if (distS < 8.5 && distS >= 2.2) {
+              player.position.x += (dxS / distS) * 2.2 * dt;
+              player.position.z += (dzS / distS) * 2.2 * dt;
+              objectiveEl.textContent = "🟢 WHOA! The Slime Guy is trying to suck you up! Catch him!";
+            }
+            if (distS < 2.2) {
+              slimeCaptured = true;
+              playChime();
+              objectiveEl.textContent = "🟢 You caught the Slime Guy! Bring him to Lab Pod 3 (next to Laser Guy) and throw him in!";
+            }
+          }
+        }
+
+        // 9 Lab Queue Monsters (Vampire -> Witch -> Pumpkin -> Cat -> Bat -> Spider -> Skeleton -> Eyeball -> Robot)
+        if (slimeInCage && !allLabMonstersCaged && labQueueIdx < labMonsterDefs.length) {
+          const def = labMonsterDefs[labQueueIdx];
+          if (def && def.obj) {
+            def.obj.visible = true;
+            if (def.flies && !activeLabThrowing) {
+              def.obj.position.y = 1.9 + Math.sin(clock.elapsedTime * 5) * 0.35;
+              if (def.key === "Monster_Bat") {
+                const wl = def.obj.getObjectByName("Bat_WingPivot_L");
+                const wr = def.obj.getObjectByName("Bat_WingPivot_R");
+                const flap = Math.sin(clock.elapsedTime * 14) * 0.65;
+                if (wl) wl.rotation.z = flap;
+                if (wr) wr.rotation.z = -flap;
+              }
+            }
+            if (activeLabThrowing) {
+              throwProgress += dt * 1.6;
+              const t = Math.min(throwProgress, 1.0);
+              def.obj.position.x = THREE.MathUtils.lerp(throwStartPos.x, def.podPos.x, t);
+              def.obj.position.z = THREE.MathUtils.lerp(throwStartPos.z, def.podPos.z, t);
+              def.obj.position.y = Math.sin(t * Math.PI) * 2.5 + (def.flies ? 0.8 : 0.2) * t;
+              if (t >= 1.0) {
+                activeLabThrowing = false;
+                activeLabCaptured = false;
+                money += 10;
+                updateHudStats();
+                playChime();
+                labQueueIdx += 1;
+                if (labQueueIdx < labMonsterDefs.length) {
+                  const nextDef = labMonsterDefs[labQueueIdx];
+                  if (nextDef.obj) nextDef.obj.visible = true;
+                  objectiveEl.textContent = `${def.label} caged (+$10)! Next up: go catch the ${nextDef.label} in the forest!`;
+                } else {
+                  allLabMonstersCaged = true;
+                  if (shadowGuy) shadowGuy.visible = true;
+                  objectiveEl.textContent = "🎉 ALL LAB MONSTERS CAGED! Now catch the RARE FLYING SHADOW GUY for your House!";
+                }
+              }
+            } else if (activeLabCaptured) {
+              const tx = player.position.x - forwardX * 2.0;
+              const tz = player.position.z - forwardZ * 2.0;
+              def.obj.position.x += (tx - def.obj.position.x) * 0.1;
+              def.obj.position.z += (tz - def.obj.position.z) * 0.1;
+              def.obj.rotation.y = player.rotation.y;
+            } else {
+              const dxM = player.position.x - def.obj.position.x;
+              const dzM = player.position.z - def.obj.position.z;
+              const distM = Math.hypot(dxM, dzM);
+              if (distM < 10.0 && distM >= 2.2) {
+                // Spider jumps down from the tree when you get close!
+                if (def.key === "Monster_Spider" && def.obj.position.y > 0.05) {
+                  def.obj.position.y = Math.max(0, def.obj.position.y - 6.0 * dt);
+                  objectiveEl.textContent = "🕷️ WHOA! The Spider JUMPED DOWN from the tree to get you!";
+                }
+                def.obj.position.x += (dxM / distM) * 2.4 * dt;
+                def.obj.position.z += (dzM / distM) * 2.4 * dt;
+                def.obj.rotation.y = Math.atan2(dxM, dzM);
+              }
+              if (distM < 2.2) {
+                activeLabCaptured = true;
+                playChime();
+                objectiveEl.textContent = `You caught the ${def.label}! Bring it to Lab Pod ${def.podIdx + 1} and press SPACEBAR to throw it in!`;
+              }
+            }
+          }
+        }
+
+        // RARE FLYING Shadow Guy ONLY active after ALL Lab Monsters are caged! Flies in the air with swaying motion!
+        if (shadowGuy && allLabMonstersCaged && !shadowInCage && !throwingShadow) {
+          shadowGuy.visible = true;
+          shadowGuy.position.y = 1.6 + Math.sin(clock.elapsedTime * 4) * 0.35;
+          shadowGuy.rotation.z = Math.sin(clock.elapsedTime * 3.5) * 0.14;
+          if (shadowCaptured) {
+            const tx = player.position.x - forwardX * 2.0;
+            const tz = player.position.z - forwardZ * 2.0;
+            shadowGuy.position.x += (tx - shadowGuy.position.x) * 0.1;
+            shadowGuy.position.z += (tz - shadowGuy.position.z) * 0.1;
+            shadowGuy.rotation.y = player.rotation.y;
+          } else {
+            const dxSh = player.position.x - shadowGuy.position.x;
+            const dzSh = player.position.z - shadowGuy.position.z;
+            const distSh = Math.hypot(dxSh, dzSh);
+            if (distSh < 12.0 && distSh >= 2.2) {
+              shadowGuy.position.x += (dxSh / distSh) * 3.0 * dt;
+              shadowGuy.position.z += (dzSh / distSh) * 3.0 * dt;
+              shadowGuy.rotation.y = Math.atan2(dxSh, dzSh);
+              objectiveEl.textContent = "👻 FLYING SHADOW GUY is swooping at you! Catch him for your House Cage!";
+            }
+            if (distSh < 2.2) {
+              shadowCaptured = true;
+              playChime();
+              objectiveEl.textContent = "👻 You caught the FLYING SHADOW GUY! Bring him to House Cage 1 and throw him in!";
+            }
+          }
+        }
+
+        // TELEPORTING GHOST ONLY active after Shadow Guy is caged! Goes into House Cage 2!
+        if (ghostGuy && shadowInCage && !ghostInCage && !throwingGhost) {
+          ghostGuy.visible = true;
+          ghostGuy.position.y = 1.4 + Math.sin(clock.elapsedTime * 3.5) * 0.3;
+          if (ghostCaptured) {
+            const tx = player.position.x - forwardX * 2.0;
+            const tz = player.position.z - forwardZ * 2.0;
+            ghostGuy.position.x += (tx - ghostGuy.position.x) * 0.1;
+            ghostGuy.position.z += (tz - ghostGuy.position.z) * 0.1;
+            ghostGuy.rotation.y = player.rotation.y;
+          } else {
+            const dxG = player.position.x - ghostGuy.position.x;
+            const dzG = player.position.z - ghostGuy.position.z;
+            const distG = Math.hypot(dxG, dzG);
+            if (distG < 14.0 && distG >= 2.2) {
+              ghostTeleportTimer += dt;
+              if (ghostTeleportTimer > 2.8) {
+                ghostTeleportTimer = 0;
+                const ang = Math.random() * Math.PI * 2;
+                ghostGuy.position.x = THREE.MathUtils.clamp(player.position.x + Math.cos(ang) * 7.5, -80, 80);
+                ghostGuy.position.z = THREE.MathUtils.clamp(player.position.z + Math.sin(ang) * 7.5, 10, 180);
+                playTone(620, 0.2, "sine", 0.14);
+                objectiveEl.textContent = "👻💨 The Ghost TELEPORTED! Track him down with your flashlight!";
+              }
+            }
+            if (distG < 2.2) {
+              ghostCaptured = true;
+              playChime();
+              objectiveEl.textContent = "👻💨 You caught the TELEPORTING GHOST! Bring him to House Cage 2 and throw him in!";
+            }
+          }
         }
 
         // Level 1: Enter Lab
@@ -633,17 +1177,80 @@
           }
         }
 
+        // Throwing animations for Laser Guy, Slime Guy, and RARE Shadow Guy!
+        if (throwingLaser && laserGuy) {
+          throwProgress += dt * 1.6;
+          const t = Math.min(throwProgress, 1.0);
+          laserGuy.position.x = THREE.MathUtils.lerp(throwStartPos.x, secondPodPos.x, t);
+          laserGuy.position.z = THREE.MathUtils.lerp(throwStartPos.z, secondPodPos.z, t);
+          laserGuy.position.y = Math.sin(t * Math.PI) * 2.5 + 0.2 * t;
+          if (t >= 1.0) {
+            throwingLaser = false;
+            laserInCage = true;
+            if (slimeGuy) slimeGuy.visible = true;
+            playChime();
+            objectiveEl.textContent = "🤖 Threw Laser Guy into Lab Pod 2! Now the SLIME GUY is out in the forest!";
+          }
+        }
+        if (throwingSlime && slimeGuy) {
+          throwProgress += dt * 1.6;
+          const t = Math.min(throwProgress, 1.0);
+          slimeGuy.position.x = THREE.MathUtils.lerp(throwStartPos.x, thirdPodPos.x, t);
+          slimeGuy.position.z = THREE.MathUtils.lerp(throwStartPos.z, thirdPodPos.z, t);
+          slimeGuy.position.y = Math.sin(t * Math.PI) * 2.5 + 0.2 * t;
+          if (t >= 1.0) {
+            throwingSlime = false;
+            slimeInCage = true;
+            if (labMonsterDefs[0] && labMonsterDefs[0].obj) labMonsterDefs[0].obj.visible = true;
+            playChime();
+            objectiveEl.textContent = "🟢 Threw Slime Guy into Lab Pod 3! Next up: go catch the 🧛 Vampire in the forest!";
+          }
+        }
+        if (throwingShadow && shadowGuy) {
+          throwProgress += dt * 1.6;
+          const t = Math.min(throwProgress, 1.0);
+          shadowGuy.position.x = THREE.MathUtils.lerp(throwStartPos.x, rareCagePos.x, t);
+          shadowGuy.position.z = THREE.MathUtils.lerp(throwStartPos.z, rareCagePos.z, t);
+          shadowGuy.position.y = Math.sin(t * Math.PI) * 2.5 + 0.2 * t;
+          if (t >= 1.0) {
+            throwingShadow = false;
+            shadowInCage = true;
+            shadowGuy.rotation.z = 0;
+            if (ghostGuy) ghostGuy.visible = true;
+            playChime();
+            objectiveEl.textContent = "👻 Shadow Guy caged! Now go catch the TELEPORTING GHOST in the forest!";
+          }
+        }
+        if (throwingGhost && ghostGuy) {
+          throwProgress += dt * 1.6;
+          const t = Math.min(throwProgress, 1.0);
+          ghostGuy.position.x = THREE.MathUtils.lerp(throwStartPos.x, rareCage2Pos.x, t);
+          ghostGuy.position.z = THREE.MathUtils.lerp(throwStartPos.z, rareCage2Pos.z, t);
+          ghostGuy.position.y = Math.sin(t * Math.PI) * 2.5 + 0.5 * t;
+          if (t >= 1.0) {
+            throwingGhost = false;
+            ghostInCage = true;
+            playChime();
+            objectiveEl.textContent = "👻🏆 TELEPORTING GHOST CAGED! You caught ALL 5 MONSTERS, Blake!";
+          }
+        }
+
         // Contextual Action Prompts
         const switchPos = new THREE.Vector3(-4.8, 0, 1.5);
         const distPod = Math.hypot(player.position.x - firstPodPos.x, player.position.z - firstPodPos.z);
         const inCabin =
-          player.position.x > -12.8 &&
-          player.position.x < -7.2 &&
-          player.position.z > 25.2 &&
-          player.position.z < 30.8;
+          player.position.x > -14.5 &&
+          player.position.x < -5.5 &&
+          player.position.z > 23.5 &&
+          player.position.z < 32.5;
+        const distCraft = craftTableObj ? Math.hypot(player.position.x - craftTableObj.position.x, player.position.z - craftTableObj.position.z) : 99;
+        const distPortal = portalObjRef ? Math.hypot(player.position.x - portalObjRef.position.x, player.position.z - portalObjRef.position.z) : 99;
+        const distPod2 = Math.hypot(player.position.x - secondPodPos.x, player.position.z - secondPodPos.z);
+        const distPod3 = Math.hypot(player.position.x - thirdPodPos.x, player.position.z - thirdPodPos.z);
+        const nearChoppable = clownInCage ? findChoppableNearPlayer() : null;
 
         if (!clownInCage && inCabin) {
-          player.position.z = 25.0;
+          player.position.z = 23.2;
           objectiveEl.textContent = "🔒 House is LOCKED! Put the Clown in the First cage first!";
         }
 
@@ -662,8 +1269,29 @@
         } else if (clownInCage && inCabin && borrowedMoney && !paidForMoreRoom) {
           actionPromptEl.textContent = "Press SPACEBAR / E to Pay $10 & Fix House!";
           actionPromptEl.style.display = "block";
-        } else if (paidForMoreRoom && inCabin) {
+        } else if (laserCaptured && !laserInCage && distPod2 < 4.5) {
+          actionPromptEl.textContent = "🤖 Press SPACEBAR / E to Put Laser Guy next to the Clown!";
+          actionPromptEl.style.display = "block";
+        } else if (laserInCage && !laserMoneyTaken && distPod2 < 4.5) {
+          actionPromptEl.textContent = axeLevel >= 1 ? "💰 Press SPACEBAR / E to Get $10 from Laser Guy!" : "🪓 Craft a Lv.1 Axe first to get $10!";
+          actionPromptEl.style.display = "block";
+        } else if (slimeCaptured && !slimeInCage && distPod3 < 4.5) {
+          actionPromptEl.textContent = "🟢 Press SPACEBAR / E to Put Slime Guy next to Laser Guy!";
+          actionPromptEl.style.display = "block";
+        } else if (slimeInCage && !slimeMoneyTaken && distPod3 < 4.5) {
+          actionPromptEl.textContent = axeLevel >= 2 ? "💰 Press SPACEBAR / E to Get $10 from Slime Guy!" : "🪓 Craft a Lv.2 Axe (2 Wood + 1 Stone) for $10!";
+          actionPromptEl.style.display = "block";
+        } else if (clownInCage && distCraft < 2.8) {
+          if (axeLevel === 0) actionPromptEl.textContent = "🔨 Press SPACEBAR / E to Craft Lv.1 Axe & Pickaxe!";
+          else if (axeLevel === 1 && wood >= 2 && stone >= 1) actionPromptEl.textContent = "🪓✨ Press SPACEBAR / E to Craft LEVEL 2 AXE!";
+          else if (wood >= 1) actionPromptEl.textContent = "🧱 Press SPACEBAR / E to Build a Wooden Block (1 Wood)!";
+          else actionPromptEl.textContent = "🪵 Chop 2 Trees & 1 Rock for Level 2 Axe!";
+          actionPromptEl.style.display = "block";
+        } else if (paidForMoreRoom && distPortal < 2.6) {
           actionPromptEl.textContent = "🌀 Press SPACEBAR / E to Teleport back to the Real Lab!";
+          actionPromptEl.style.display = "block";
+        } else if (nearChoppable) {
+          actionPromptEl.textContent = `🪓 Press SPACEBAR / E to Chop ${nearChoppable.category === "tree" ? "Tree (+1 Wood)" : "Rock (+1 Stone)"}!`;
           actionPromptEl.style.display = "block";
         } else {
           actionPromptEl.style.display = "none";

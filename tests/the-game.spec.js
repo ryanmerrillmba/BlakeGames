@@ -67,4 +67,13 @@ test.describe("The Game — 3D Collision & Movement Tests", () => {
     });
     expect(objectBlocked.endZ).toBeGreaterThan(objectBlocked.centerZ);
   });
+
+  test("house test: can walk through house door and see crafting table, portal, and laser guy", async ({ page }) => {
+    await page.goto("/the-game/index.html?test=house");
+    const badge = page.locator("#autotest-results");
+    await expect(badge).toBeVisible({ timeout: 15000 });
+    await expect(badge).toContainText("ALL COLLISION TESTS PASSED");
+    await expect(badge).toContainText("House Door + Crafting Table + Portal");
+    await expect(badge).toContainText("Laser Guy in Forest");
+  });
 });
