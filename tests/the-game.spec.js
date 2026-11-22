@@ -116,5 +116,6 @@ test.describe("The Game — 3D Collision & Movement Tests", () => {
     expect(text).toContain("Witch Deleted + Killed Bad Guy Follows Into Cauldron Cage");
     expect(text).toContain("Top Row Has 4 Flying Cages + Pumpkin Next to Vampire");
     expect(text).toContain("Cat Eats Rat + Both Heads Point Forward");
+    expect(text).toContain("Follow Me Toggle Makes Cat Follow Hero");
   });
 });
