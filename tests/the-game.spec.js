@@ -118,5 +118,6 @@ test.describe("The Game — 3D Collision & Movement Tests", () => {
     expect(text).toContain("Cat Eats Rat + Both Heads Point Forward");
     expect(text).toContain("Follow Me Toggle Makes Cat Follow Hero");
     expect(text).toContain("Bat Is Visible, Flapping & Flying in the Game");
+    expect(text).toContain("Cat Head Points Forward While Following + Magical Eyeball Visible & Hovering");
   });
 });

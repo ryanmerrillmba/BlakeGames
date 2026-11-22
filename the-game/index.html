@@ -1620,20 +1620,26 @@
 
         // 3) HEAD TRACKING (Looks toward Blake cleanly, respecting faceOffset!)
         if (rig.head) {
-          let lookYaw = Math.sin(t * 1.7 + root.id) * 0.28;
-          if (playerObj) {
-            const dxP = playerObj.position.x - root.position.x;
-            const dzP = playerObj.position.z - root.position.z;
-            if (Math.hypot(dxP, dzP) < 12.0) {
-              const worldYaw = Math.atan2(dxP, dzP) + faceOffset;
-              let rel = worldYaw - root.rotation.y;
-              while (rel > Math.PI) rel -= Math.PI * 2;
-              while (rel < -Math.PI) rel += Math.PI * 2;
-              lookYaw = THREE.MathUtils.clamp(rel, -0.75, 0.75);
+          if (key === "Monster_Cat") {
+            // Keep Cat's head pointing straight forward the right way along its body!
+            rig.head.rotation.y = THREE.MathUtils.lerp(rig.head.rotation.y, 0, 0.25);
+            rig.head.rotation.z = Math.sin(t * 2.2) * 0.04;
+          } else {
+            let lookYaw = Math.sin(t * 1.7 + root.id) * 0.28;
+            if (playerObj) {
+              const dxP = playerObj.position.x - root.position.x;
+              const dzP = playerObj.position.z - root.position.z;
+              if (Math.hypot(dxP, dzP) < 12.0) {
+                const worldYaw = Math.atan2(dxP, dzP) + faceOffset;
+                let rel = worldYaw - root.rotation.y;
+                while (rel > Math.PI) rel -= Math.PI * 2;
+                while (rel < -Math.PI) rel += Math.PI * 2;
+                lookYaw = THREE.MathUtils.clamp(rel, -0.75, 0.75);
+              }
             }
+            rig.head.rotation.y = THREE.MathUtils.lerp(rig.head.rotation.y, lookYaw, 0.12);
+            rig.head.rotation.z = Math.sin(t * 2.4 + root.id) * 0.10 + actWave * 0.15;
           }
-          rig.head.rotation.y = THREE.MathUtils.lerp(rig.head.rotation.y, lookYaw, 0.12);
-          rig.head.rotation.z = Math.sin(t * 2.4 + root.id) * 0.10 + actWave * 0.15;
         }
 
         // 4) QUADRUPED (Cat) — 4-Leg Trot + Wagging Tail
@@ -2096,6 +2102,29 @@
         }
       }
 
+      function updateEyeballFlight(dt, t) {
+        const eyeObj = getMonsterByKey("Monster_Eyeball");
+        if (!eyeObj || !eyeObj.visible || isMonsterCaged(eyeObj)) return;
+        const eyeDef = labMonsterDefs.find((d) => d.key === "Monster_Eyeball");
+        const eyeQueueActive = Boolean(slimeInCage && !allLabMonstersCaged && eyeDef && labMonsterDefs[labQueueIdx] === eyeDef);
+        if (eyeObj.userData.defeatedFollow || (eyeQueueActive && (activeLabCaptured || activeLabThrowing))) return;
+
+        if (followMeActive && player) {
+          followCapturedMonster(eyeObj, player, 0, 1, dt, { flies: true, followDist: 3.4 });
+          eyeObj.position.y = 2.25 + Math.sin(t * 4.0 + 1.2) * 0.30;
+        } else if (!eyeQueueActive) {
+          const ang = t * 0.85 + 2.1;
+          const targetX = -2.2 + Math.cos(ang) * 3.4;
+          const targetZ = -15.6 + Math.sin(ang * 1.2) * 2.2;
+          eyeObj.position.x += (targetX - eyeObj.position.x) * Math.min(1, dt * 2.6);
+          eyeObj.position.z += (targetZ - eyeObj.position.z) * Math.min(1, dt * 2.6);
+          eyeObj.position.y = 2.2 + Math.sin(t * 3.6 + 0.9) * 0.32;
+          if (player) {
+            faceMonsterForward(eyeObj, player.position.x - eyeObj.position.x, player.position.z - eyeObj.position.z);
+          }
+        }
+      }
+
       function playCatEatRatSfx() {
         // Double crunch + happy feline purr/meow!
         playNoiseBurst(0.08, 0.22);
@@ -2254,9 +2283,12 @@
           if (loftGhostCage) rareCage2Pos.copy(loftGhostCage.position);
           for (const def of labMonsterDefs) {
             def.obj = gltf.scene.getObjectByName(def.key);
-            if (def.obj) def.obj.visible = def.key === "Monster_Bat";
+            if (def.obj) def.obj.visible = def.key === "Monster_Bat" || def.key === "Monster_Eyeball";
             if (def.key === "Monster_Bat" && def.obj) {
               def.obj.position.set(2.5, 2.3, -14.5);
+            }
+            if (def.key === "Monster_Eyeball" && def.obj) {
+              def.obj.position.set(-3.2, 2.2, -15.8);
             }
             const p = def.loftCageIdx !== undefined
               ? gltf.scene.getObjectByName(`Loft_Cage_Base_${def.loftCageIdx}`)
@@ -2912,6 +2944,36 @@
               batObjT.position.copy(batOrigPos);
             }
             results.push({ name: "Bat Is Visible, Flapping & Flying in the Game", pass: batInGamePass });
+
+            // 42. Cat Head Points Forward While Following + Magical Eyeball Visible & Hovering
+            const eyeObjT = getMonsterByKey("Monster_Eyeball");
+            let eyeAndCatHeadPass = false;
+            if (eyeObjT && catObjT) {
+              const eyeOrigPos = eyeObjT.position.clone();
+              const eyeVisAtStart = eyeObjT.visible === true;
+              updateEyeballFlight(0.05, 1.4);
+              const eyeMoved = eyeObjT.position.distanceTo(eyeOrigPos) > 0.005 && eyeObjT.position.y > 1.5;
+              eyeObjT.position.copy(eyeOrigPos);
+
+              // Verify followCapturedMonster points Cat's body & head straight toward hero!
+              const cOrigPos = catObjT.position.clone();
+              const cOrigRot = catObjT.rotation.y;
+              const pOrigPos = player.position.clone();
+              player.position.set(4.0, 0.0, -14.0);
+              catObjT.position.set(0.0, 0.0, -14.0);
+              catObjT.rotation.y = Math.PI; // start pointing wrong way
+              followCapturedMonster(catObjT, player, 0, 1, 0.05, { flies: false, followDist: 2.0 });
+              const expectedYaw = Math.atan2(player.position.x - catObjT.position.x, player.position.z - catObjT.position.z);
+              let yawDiff = Math.abs(catObjT.rotation.y - expectedYaw);
+              while (yawDiff > Math.PI) yawDiff = Math.abs(yawDiff - Math.PI * 2);
+              const catPointsAtHero = yawDiff < 0.2;
+              catObjT.position.copy(cOrigPos);
+              catObjT.rotation.y = cOrigRot;
+              player.position.copy(pOrigPos);
+
+              eyeAndCatHeadPass = Boolean(eyeVisAtStart && eyeMoved && catPointsAtHero);
+            }
+            results.push({ name: "Cat Head Points Forward While Following + Magical Eyeball Visible & Hovering", pass: eyeAndCatHeadPass });
             isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
@@ -3477,6 +3539,12 @@
           monsterObj.position.x += (tx - monsterObj.position.x) * catchUp;
           monsterObj.position.z += (tz - monsterObj.position.z) * catchUp;
         }
+        // Always point the following monster's body & head straight forward toward the hero!
+        const fdx = playerObj.position.x - monsterObj.position.x;
+        const fdz = playerObj.position.z - monsterObj.position.z;
+        if (Math.hypot(fdx, fdz) > 0.05) {
+          faceMonsterForward(monsterObj, fdx, fdz);
+        }
         return true;
       }
 
@@ -3725,6 +3793,7 @@
         }
         updateCatAndRat(dt, clock.elapsedTime);
         updateBatFlight(dt, clock.elapsedTime);
+        updateEyeballFlight(dt, clock.elapsedTime);
 
         // RARE FLYING Shadow Guy ONLY active after ALL Lab Monsters are caged! Flies in the air with swaying motion!
         if (shadowGuy && allLabMonstersCaged && !shadowInCage && !throwingShadow) {
