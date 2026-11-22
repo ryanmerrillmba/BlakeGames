@@ -94,5 +94,8 @@ test.describe("The Game — 3D Collision & Movement Tests", () => {
     await expect(badge).toContainText("Physics: Caged Bad Guy Verified Inside Cage Bounds");
     await expect(badge).toContainText("Physics: Cage Cap Sealed on Top of Occupied Cage");
     await expect(badge).toContainText("Performance Budget");
+    await expect(badge).toContainText("Physical Weapon Attacks (No Circle Ring; Real Projectiles & Sword Swing)");
+    await expect(badge).toContainText("Physical Enemy Attacks (Witch Purple Lightning, Laser Bolt & Spider Lunge)");
+    await expect(badge).toContainText("Hero HP Bar (Bottom-Right) + Enemy HP Bar (Top-Center)");
   });
 });

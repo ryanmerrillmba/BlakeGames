@@ -153,12 +153,6 @@
       <div class="panel">
         <a class="back-btn" href="../index.html">← Back to Blake Games</a>
         <h1>The Game <span id="money-hud" style="color:#4ade80; font-size:1.1rem; margin-left:10px;">💰 $0</span></h1>
-        <div id="hero-hp-wrap" style="margin:6px 0 6px 0; display:flex; align-items:center; gap:8px;">
-          <span id="hero-hp-label" style="font-size:0.85rem; font-weight:900; color:#f87171; min-width:86px;">❤️ 100/100</span>
-          <div style="flex:1; height:12px; background:#1e293b; border:1.5px solid #475569; border-radius:999px; overflow:hidden; max-width:200px;">
-            <div id="hero-hp-fill" style="width:100%; height:100%; background:linear-gradient(90deg,#22c55e,#4ade80); transition:width 0.18s ease;"></div>
-          </div>
-        </div>
         <div id="objective">Objective: Walk through the door into the weird lab!</div>
       </div>
       <div style="position:relative; pointer-events:auto;">
@@ -224,6 +218,25 @@
     <div id="minimap-wrap" style="padding:5px;border-radius:10px;">
       <canvas id="minimap" width="112" height="112" style="border-radius:6px; display:block;"></canvas>
       <div id="minimap-label" style="font-size:0.64rem;margin-top:3px;letter-spacing:-0.2px;">🔵You 🔴Bad 🟢Cage</div>
+    </div>
+
+    <!-- Top-Center Enemy Target Health Bar (shows active bad guy HP at the top of the screen!) -->
+    <div id="enemy-hp-bar" style="display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:26;background:rgba(15,23,42,0.92);border:2px solid #ef4444;border-radius:12px;padding:8px 16px;min-width:240px;text-align:center;box-shadow:0 4px 20px rgba(239,68,68,0.45);pointer-events:none;">
+      <div id="enemy-hp-title" style="font-size:0.9rem;font-weight:900;color:#fde047;margin-bottom:4px;">🤡 Clown — ❤️ 3/3</div>
+      <div style="height:10px;background:#1e293b;border:1px solid #475569;border-radius:999px;overflow:hidden;">
+        <div id="enemy-hp-fill" style="width:100%;height:100%;background:linear-gradient(90deg,#ef4444,#f97316);transition:width 0.14s ease;"></div>
+      </div>
+    </div>
+
+    <!-- Bottom-Right Hero Health Bar -->
+    <div id="hero-hp-panel" style="position:fixed;bottom:16px;right:16px;z-index:26;background:rgba(15,23,42,0.92);border:2px solid #22c55e;border-radius:12px;padding:10px 14px;width:210px;box-shadow:0 4px 20px rgba(0,0,0,0.55);pointer-events:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+        <span style="font-size:0.78rem;font-weight:900;color:#86efac;letter-spacing:0.4px;">HERO HEALTH</span>
+        <span id="hero-hp-label" style="font-size:0.86rem;font-weight:900;color:#f8fafc;">❤️ 100/100</span>
+      </div>
+      <div style="height:12px;background:#1e293b;border:1.5px solid #475569;border-radius:999px;overflow:hidden;">
+        <div id="hero-hp-fill" style="width:100%;height:100%;background:linear-gradient(90deg,#22c55e,#4ade80);transition:width 0.18s ease;"></div>
+      </div>
     </div>
 
     <script type="module">
@@ -761,14 +774,110 @@
       const weaponNames = ["None", "⚡ Shock Blaster", "🔥 Flame Sword", "🌈 Freeze Ray"];
       const weaponCosts = [0, 10, 20, 35];
 
-      // Glowing 3D Attack Blast Ring when you press Q!
-      const attackRing = new THREE.Mesh(
-        new THREE.TorusGeometry(2.6, 0.16, 12, 28),
-        new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
-      );
-      attackRing.rotation.x = Math.PI / 2;
-      attackRing.visible = false;
-      scene.add(attackRing);
+      // =========================================================================
+      // REAL PHYSICAL PROJECTILE & MELEE COMBAT ENGINE (No Expanding Ring!)
+      // =========================================================================
+      const activeProjectiles = [];
+      let lastAttackWeaponTier = 0;
+
+      function spawnProjectile({ origin, dirX, dirZ, speed, color, dmg, fromEnemy, kind, radius = 0.45, maxDist = 24, ownerKey = "" }) {
+        const grp = new THREE.Group();
+        grp.position.copy(origin);
+        grp.rotation.y = Math.atan2(-dirX, -dirZ);
+        if (kind === "purple_lightning") {
+          // Witch's jagged 3D Purple Lightning Bolt!
+          const lMat = new THREE.MeshBasicMaterial({ color: 0xc084fc });
+          const cMat = new THREE.MeshBasicMaterial({ color: 0xf5d0fe });
+          for (let i = 0; i < 3; i++) {
+            const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.75, 6), i === 1 ? cMat : lMat);
+            seg.rotation.x = Math.PI / 2;
+            seg.position.set((i === 1 ? 0.14 : -0.10), 0, -i * 0.62);
+            seg.rotation.z = i === 1 ? 0.35 : -0.35;
+            grp.add(seg);
+          }
+        } else if (kind === "laser" || kind === "shock_bolt") {
+          const bMat = new THREE.MeshBasicMaterial({ color });
+          const core = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1.5, 8), bMat);
+          core.rotation.x = Math.PI / 2;
+          grp.add(core);
+        } else if (kind === "freeze_bolt") {
+          const cMat = new THREE.MeshBasicMaterial({ color: 0x67e8f9 });
+          const rMat = new THREE.MeshBasicMaterial({ color: 0xf472b6 });
+          grp.add(new THREE.Mesh(new THREE.OctahedronGeometry(0.28, 0), cMat));
+          const ring = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.06, 6, 12), rMat);
+          grp.add(ring);
+        } else {
+          // Fireball / Arcane Orb
+          grp.add(new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 8), new THREE.MeshBasicMaterial({ color })));
+        }
+        scene.add(grp);
+        const proj = {
+          mesh: grp, vx: dirX * speed, vz: dirZ * speed, speed, color, dmg,
+          fromEnemy: Boolean(fromEnemy), kind, radius, traveled: 0, maxDist, ownerKey, alive: true
+        };
+        activeProjectiles.push(proj);
+        return proj;
+      }
+
+      function updateProjectiles(dt, monsterList) {
+        for (let i = activeProjectiles.length - 1; i >= 0; i--) {
+          const p = activeProjectiles[i];
+          if (!p.alive) {
+            scene.remove(p.mesh);
+            activeProjectiles.splice(i, 1);
+            continue;
+          }
+          const stepX = p.vx * dt;
+          const stepZ = p.vz * dt;
+          p.mesh.position.x += stepX;
+          p.mesh.position.z += stepZ;
+          p.traveled += Math.hypot(stepX, stepZ);
+          if (p.kind === "freeze_bolt") p.mesh.rotation.z += dt * 10;
+
+          // Collide with solid walls & trees!
+          const hitObs = collidesForEntity(p.mesh.position.x, p.mesh.position.z, 0.22, { ignoreCages: true });
+          if (hitObs || p.traveled >= p.maxDist) {
+            p.alive = false;
+            scene.remove(p.mesh);
+            activeProjectiles.splice(i, 1);
+            continue;
+          }
+
+          if (p.fromEnemy && player) {
+            const dP = Math.hypot(p.mesh.position.x - player.position.x, p.mesh.position.z - player.position.z);
+            if (dP < 0.95) {
+              const info = BAD_GUYS_CATALOG.find((g) => g.key === p.ownerKey);
+              damageHero(p.dmg, info ? `${info.emoji} ${info.name}` : p.ownerKey);
+              p.alive = false;
+              scene.remove(p.mesh);
+              activeProjectiles.splice(i, 1);
+            }
+          } else if (!p.fromEnemy && monsterList) {
+            for (const m of monsterList) {
+              if (!m || !m.visible) continue;
+              const dM = Math.hypot(p.mesh.position.x - m.position.x, p.mesh.position.z - m.position.z);
+              if (dM < 1.35) {
+                const len = Math.hypot(p.vx, p.vz) || 1;
+                moveMonsterSafe(m, (p.vx / len) * 2.2, (p.vz / len) * 2.2);
+                playMonsterSFX(m.name);
+                damageMonster(m, p.dmg);
+                // Also apply to battleEnemies if in Battle Mode
+                if (battleMode && battleEnemies.length > 0) {
+                  const be = battleEnemies.find((e) => e.obj === m && e.hp > 0);
+                  if (be) {
+                    be.hp -= p.dmg;
+                    if (be.hp <= 0) { be.obj.visible = false; money += 25; updateHudStats(); }
+                  }
+                }
+                p.alive = false;
+                scene.remove(p.mesh);
+                activeProjectiles.splice(i, 1);
+                break;
+              }
+            }
+          }
+        }
+      }
 
       function updateHudStats() {
         let tools = "";
@@ -844,72 +953,70 @@
       function fireWeaponAttack() {
         if (!player) return;
         const dmg = Math.max(1, weaponTier + 1);
-        const reach = weaponTier === 3 ? 15.0 : weaponTier === 1 ? 12.0 : weaponTier === 2 ? 10.5 : 8.5;
-        const activeName = weaponTier === 0 ? "🔦 Flashlight Blast" : weaponNames[weaponTier];
-        attackFlashTimer = 0.35;
-        monsterStunTimer = weaponTier === 3 ? 6.5 : 2.5 + weaponTier * 1.1;
-        attackRing.position.set(player.position.x, player.position.y + 1.0, player.position.z);
-        attackRing.material.color.setHex(weaponTier === 0 ? 0xfef08a : weaponTier === 1 ? 0x38bdf8 : weaponTier === 2 ? 0xf97316 : 0x67e8f9);
-        attackRing.visible = true;
+        const activeName = weaponTier === 0 ? "🔦 Flashlight Bash" : weaponNames[weaponTier];
+        lastAttackWeaponTier = weaponTier;
+        attackFlashTimer = 0.36;
+        monsterStunTimer = weaponTier === 3 ? 5.5 : 1.8 + weaponTier * 0.8;
         spawnWeaponVFX(weaponTier);
         playWeaponSFX(weaponTier);
 
-        if (battleMode && battleEnemies.length > 0) {
-          let hits = 0;
-          for (const e of battleEnemies) {
-            if (e.hp <= 0 || !e.obj) continue;
-            const dxE = e.obj.position.x - player.position.x;
-            const dzE = e.obj.position.z - player.position.z;
-            const d = Math.hypot(dxE, dzE);
-            if (d < reach) {
-              e.hp -= dmg;
-              hits++;
-              playMonsterSFX(e.key);
-              // Knock enemy backward safely with Monster Physics!
-              if (d > 0.1) moveMonsterSafe(e.obj, (dxE / d) * 3.2, (dzE / d) * 3.2, { wallsOnly: e.flies });
-              if (e.hp <= 0) {
-                e.obj.visible = false;
-                money += 25;
-                updateHudStats();
-              }
-            }
-          }
-          const alive = battleEnemies.filter((e) => e.hp > 0).length;
-          if (alive === 0) {
-            battleMode = false;
-            playChime();
-            objectiveEl.textContent = "🏆 YOU DEFEATED ALL THE BAD GUYS OUTSIDE! (+$25 each!)";
-          } else if (hits > 0) {
-            objectiveEl.textContent = `💥 Blasted ${hits} bad guy(s) with ${activeName}! ${alive} left!`;
-          } else {
-            objectiveEl.textContent = `⚡ Fired ${activeName}! Get closer to blast the ${alive} bad guys!`;
-          }
-        } else {
-          // Even outside Battle Mode, Q damages, knocks back & defeats any nearby bad guy so you can capture them!
-          let knocked = 0;
-          let defeatedCount = 0;
-          const allM = [clown, laserGuy, slimeGuy, shadowGuy, ghostGuy, ...labMonsterDefs.map((d) => d.obj), ...houseBossDefs.map((b) => b.obj)];
-          for (const m of allM) {
-            if (!m || !m.visible) continue;
-            const dxM = m.position.x - player.position.x;
-            const dzM = m.position.z - player.position.z;
-            const d = Math.hypot(dxM, dzM);
-            if (d > 0.1 && d < reach) {
-              moveMonsterSafe(m, (dxM / d) * 2.4, (dzM / d) * 2.4);
+        const fx = -Math.sin(player.rotation.y);
+        const fz = -Math.cos(player.rotation.y);
+        const allM = [clown, laserGuy, slimeGuy, shadowGuy, ghostGuy, ...labMonsterDefs.map((d) => d.obj), ...houseBossDefs.map((b) => b.obj)];
+
+        // Tier 1 (Shock Blaster) & Tier 3 (Freeze Ray): FIRE REAL FLYING 3D PHYSICS PROJECTILES!
+        if (weaponTier === 1 || weaponTier === 3) {
+          const muzzle = new THREE.Vector3(player.position.x + fx * 1.1, player.position.y + 1.15, player.position.z + fz * 1.1);
+          spawnProjectile({
+            origin: muzzle, dirX: fx, dirZ: fz,
+            speed: weaponTier === 1 ? 28.0 : 24.0,
+            color: weaponTier === 1 ? 0x38bdf8 : 0x67e8f9,
+            dmg, fromEnemy: false,
+            kind: weaponTier === 1 ? "shock_bolt" : "freeze_bolt",
+            maxDist: weaponTier === 1 ? 22 : 26
+          });
+          objectiveEl.textContent = `⚡ Fired ${activeName}! Aim your shot at the bad guys!`;
+          return;
+        }
+
+        // Tier 0 (Flashlight Bash) & Tier 2 (Flame Sword): PHYSICAL FORWARD MELEE SWING ARC!
+        const meleeReach = weaponTier === 2 ? 5.2 : 4.5;
+        let hitCount = 0;
+        let defeatedCount = 0;
+        for (const m of allM) {
+          if (!m || !m.visible) continue;
+          const dxM = m.position.x - player.position.x;
+          const dzM = m.position.z - player.position.z;
+          const d = Math.hypot(dxM, dzM);
+          if (d > 0.05 && d < meleeReach) {
+            const dot = (dxM / d) * fx + (dzM / d) * fz;
+            if (dot > 0.15 || d < 2.1) { // Must be physically in front of the hero's swing!
+              moveMonsterSafe(m, (dxM / d) * (weaponTier === 2 ? 3.2 : 2.2), (dzM / d) * (weaponTier === 2 ? 3.2 : 2.2));
               playMonsterSFX(m.name);
               const beforeHp = getMonsterHP(m);
               if (beforeHp > 0) {
                 damageMonster(m, dmg);
                 if (getMonsterHP(m) <= 0) defeatedCount++;
               }
-              knocked++;
+              if (battleMode && battleEnemies.length > 0) {
+                const be = battleEnemies.find((e) => e.obj === m && e.hp > 0);
+                if (be) {
+                  be.hp -= dmg;
+                  if (be.hp <= 0) { be.obj.visible = false; money += 25; updateHudStats(); }
+                }
+              }
+              hitCount++;
             }
           }
-          if (defeatedCount === 0) {
-            objectiveEl.textContent = knocked > 0
-              ? `💥 Hit ${knocked} bad guy(s) with ${activeName}! Beat their HP to 0 to capture them!`
-              : `⚡ Fired ${activeName}! Press Q near bad guys to beat their HP to 0!`;
-          }
+        }
+        if (battleMode && battleEnemies.length > 0 && battleEnemies.every((e) => e.hp <= 0)) {
+          battleMode = false;
+          playChime();
+          objectiveEl.textContent = "🏆 YOU DEFEATED ALL THE BAD GUYS OUTSIDE! (+$25 each!)";
+        } else if (defeatedCount === 0) {
+          objectiveEl.textContent = hitCount > 0
+            ? `💥 Slashed ${hitCount} bad guy(s) with ${activeName}! Beat their HP to 0 to capture!`
+            : `⚔️ Swung ${activeName}! Get close & face the bad guys to hit them!`;
         }
       }
 
@@ -1155,35 +1262,68 @@
         }
       }
 
+      const enemyHpBarEl = document.getElementById("enemy-hp-bar");
+      const enemyHpTitleEl = document.getElementById("enemy-hp-title");
+      const enemyHpFillEl = document.getElementById("enemy-hp-fill");
+      const heroHpPanelEl = document.getElementById("hero-hp-panel");
+
       const MONSTER_COMBAT_CONFIG = {
-        Monster_Clown:         { maxHp: 3, dmg: 8,  range: 2.8, atk: "🔨 Carnival Mallet", color: 0xef4444 },
-        Monster_LaserGuy:      { maxHp: 4, dmg: 10, range: 8.5, atk: "🔫 Red Laser Rifle", color: 0xff1122 },
-        Monster_SlimeGuy:      { maxHp: 4, dmg: 8,  range: 3.2, atk: "🟢 Acid Slime Splash", color: 0x4ade80 },
-        Monster_Vampire:       { maxHp: 4, dmg: 10, range: 3.0, atk: "🗡️ Blood-Ruby Rapier & Bite", color: 0xdc2626 },
-        Monster_Witch:         { maxHp: 4, dmg: 9,  range: 7.5, atk: "🧹 Magic Hex Bolt", color: 0x22c55e },
-        Monster_Pumpkin:       { maxHp: 4, dmg: 9,  range: 4.5, atk: "🔥 Flaming Vine Torch", color: 0xf97316 },
-        Monster_Cat:           { maxHp: 3, dmg: 7,  range: 2.8, atk: "🐾 Razor Claw Swipe", color: 0x86efac },
-        Monster_Bat:           { maxHp: 3, dmg: 7,  range: 3.2, atk: "🦇 Swooping Fang Bite", color: 0xf43f5e },
-        Monster_Spider:        { maxHp: 4, dmg: 9,  range: 3.0, atk: "🕷️ Venomous Fang Bite", color: 0xa855f7 },
-        Monster_Skeleton:      { maxHp: 4, dmg: 9,  range: 3.0, atk: "⚔️ Bone Cutlass Slash", color: 0x38bdf8 },
-        Monster_Eyeball:       { maxHp: 5, dmg: 10, range: 8.0, atk: "👁️ Arcane Eye Beam", color: 0xc084fc },
-        Monster_Robot:         { maxHp: 6, dmg: 12, range: 4.2, atk: "⚡ 8-Arm Electric Shock", color: 0x38bdf8 },
-        Monster_Frankenstein:  { maxHp: 6, dmg: 12, range: 3.2, atk: "⚡ Electrified Steel Pipe", color: 0x60a5fa },
-        Monster_Zombie:        { maxHp: 4, dmg: 8,  range: 2.8, atk: "🪵 Nail-Plank Bash", color: 0x84cc16 },
-        Monster_Werewolf:      { maxHp: 6, dmg: 12, range: 3.2, atk: "🐺 Ferocious Claw Lunge", color: 0xef4444 },
-        Monster_Mummy:         { maxHp: 5, dmg: 10, range: 3.0, atk: "🗡️ Golden Pharaoh Khopesh", color: 0xfacc15 },
-        Monster_ShadowGuy:     { maxHp: 6, dmg: 12, range: 4.0, atk: "🟣 Void Shadow Scythe", color: 0xa855f7 },
-        Monster_Ghost:         { maxHp: 5, dmg: 10, range: 4.5, atk: "👻 Spectral Chill Touch", color: 0x67e8f9 },
-        Monster_RainbowSnake:  { maxHp: 8, dmg: 13, range: 3.6, atk: "🐍 Prismatic Venom Strike", color: 0xf472b6 },
-        Monster_FlyingPumpkin: { maxHp: 8, dmg: 14, range: 7.5, atk: "🔥 Fiery Swoop Bomb", color: 0xfb923c },
-        Monster_BoneBreaker:   { maxHp: 10, dmg: 16, range: 3.8, atk: "🔨 Bone-Breaker Warhammer", color: 0xef4444 }
+        Monster_Clown:         { maxHp: 3, dmg: 8,  range: 3.0, atk: "🔨 Carnival Mallet", color: 0xef4444, mode: "melee" },
+        Monster_LaserGuy:      { maxHp: 4, dmg: 10, range: 12.0, atk: "🔫 Red Laser Bolt", color: 0xff1122, mode: "ranged", projKind: "laser", projSpeed: 22 },
+        Monster_SlimeGuy:      { maxHp: 4, dmg: 8,  range: 3.5, atk: "🟢 Leaping Slime Slam", color: 0x4ade80, mode: "lunge" },
+        Monster_Vampire:       { maxHp: 4, dmg: 10, range: 3.2, atk: "🗡️ Blood-Ruby Rapier", color: 0xdc2626, mode: "melee" },
+        Monster_Witch:         { maxHp: 4, dmg: 9,  range: 11.5, atk: "⚡ Purple Lightning", color: 0xc084fc, mode: "ranged", projKind: "purple_lightning", projSpeed: 18 },
+        Monster_Pumpkin:       { maxHp: 4, dmg: 9,  range: 9.5, atk: "🔥 Flaming Fireball", color: 0xf97316, mode: "ranged", projKind: "fireball", projSpeed: 16 },
+        Monster_Cat:           { maxHp: 3, dmg: 7,  range: 3.2, atk: "🐾 Pouncing Claw Swipe", color: 0x86efac, mode: "lunge" },
+        Monster_Bat:           { maxHp: 3, dmg: 7,  range: 3.6, atk: "🦇 Swooping Fang Bite", color: 0xf43f5e, mode: "lunge" },
+        Monster_Spider:        { maxHp: 4, dmg: 9,  range: 3.4, atk: "🕷️ Lunging Fang Bite", color: 0xa855f7, mode: "lunge" },
+        Monster_Skeleton:      { maxHp: 4, dmg: 9,  range: 3.2, atk: "⚔️ Bone Cutlass Slash", color: 0x38bdf8, mode: "melee" },
+        Monster_Eyeball:       { maxHp: 5, dmg: 10, range: 11.5, atk: "👁️ Arcane Violet Bolt", color: 0xc084fc, mode: "ranged", projKind: "purple_lightning", projSpeed: 19 },
+        Monster_Robot:         { maxHp: 6, dmg: 12, range: 4.5, atk: "⚡ 8-Arm Electric Thrust", color: 0x38bdf8, mode: "melee" },
+        Monster_Frankenstein:  { maxHp: 6, dmg: 12, range: 3.4, atk: "⚡ Electrified Pipe Smash", color: 0x60a5fa, mode: "melee" },
+        Monster_Zombie:        { maxHp: 4, dmg: 8,  range: 3.0, atk: "🪵 Nail-Plank Swing", color: 0x84cc16, mode: "melee" },
+        Monster_Werewolf:      { maxHp: 6, dmg: 12, range: 3.6, atk: "🐺 Ferocious Claw Lunge", color: 0xef4444, mode: "lunge" },
+        Monster_Mummy:         { maxHp: 5, dmg: 10, range: 3.2, atk: "🗡️ Pharaoh Khopesh Slash", color: 0xfacc15, mode: "melee" },
+        Monster_ShadowGuy:     { maxHp: 6, dmg: 12, range: 4.2, atk: "🟣 Void Scythe Reap", color: 0xa855f7, mode: "melee" },
+        Monster_Ghost:         { maxHp: 5, dmg: 10, range: 4.5, atk: "👻 Spectral Dash", color: 0x67e8f9, mode: "lunge" },
+        Monster_RainbowSnake:  { maxHp: 8, dmg: 13, range: 3.8, atk: "🐍 Lunging Venom Strike", color: 0xf472b6, mode: "lunge" },
+        Monster_FlyingPumpkin: { maxHp: 8, dmg: 14, range: 11.0, atk: "🔥 Aerial Fireball", color: 0xfb923c, mode: "ranged", projKind: "fireball", projSpeed: 18 },
+        Monster_BoneBreaker:   { maxHp: 10, dmg: 16, range: 4.0, atk: "🔨 Warhammer Overhead Smash", color: 0xef4444, mode: "melee" }
       };
+
+      function performEnemyPhysicalAttack(mObj, st, targetPlayer) {
+        if (!mObj || !st || !targetPlayer) return null;
+        const dx = targetPlayer.position.x - mObj.position.x;
+        const dz = targetPlayer.position.z - mObj.position.z;
+        const d = Math.hypot(dx, dz) || 1;
+        faceMonsterForward(mObj, dx, dz);
+        mObj.userData.attackAnimTimer = 0.38; // Physically swings weapon arm / lunges head in updateLifelikeMonster!
+        playMonsterSFX(mObj.name);
+
+        if (st.mode === "ranged") {
+          const origin = new THREE.Vector3(mObj.position.x + (dx / d) * 0.9, Math.max(1.1, mObj.position.y + 1.1), mObj.position.z + (dz / d) * 0.9);
+          return spawnProjectile({
+            origin, dirX: dx / d, dirZ: dz / d,
+            speed: st.projSpeed || 18, color: st.color, dmg: st.dmg,
+            fromEnemy: true, kind: st.projKind || "fireball", maxDist: 22, ownerKey: mObj.name
+          });
+        }
+        // Physical melee swing or creature bite lunge!
+        const lungeDist = st.mode === "lunge" ? 1.15 : 0.65;
+        moveMonsterSafe(mObj, (dx / d) * lungeDist, (dz / d) * lungeDist, { wallsOnly: mObj.position.y > 0.4 });
+        const postDist = Math.hypot(targetPlayer.position.x - mObj.position.x, targetPlayer.position.z - mObj.position.z);
+        if (postDist <= st.range + 0.4) {
+          const info = BAD_GUYS_CATALOG.find((g) => g.key === mObj.name);
+          damageHero(st.dmg, info ? `${info.emoji} ${info.name}` : mObj.name);
+        }
+        return null;
+      }
 
       const monsterCombatState = new Map();
       function getMonsterState(key) {
         if (!monsterCombatState.has(key)) {
-          const cfg = MONSTER_COMBAT_CONFIG[key] || { maxHp: 3, dmg: 8, range: 3.0, atk: "⚔️ Strike", color: 0xef4444 };
-          monsterCombatState.set(key, { hp: cfg.maxHp, maxHp: cfg.maxHp, dmg: cfg.dmg, range: cfg.range, atk: cfg.atk, color: cfg.color, lastAtk: 0 });
+          const cfg = MONSTER_COMBAT_CONFIG[key] || { maxHp: 3, dmg: 8, range: 3.0, atk: "⚔️ Strike", color: 0xef4444, mode: "melee" };
+          monsterCombatState.set(key, { ...cfg, hp: cfg.maxHp, lastAtk: 0 });
         }
         return monsterCombatState.get(key);
       }
@@ -1485,6 +1625,15 @@
         for (let i = 0; i < rig.magicRings.length; i++) {
           rig.magicRings[i].rotation.y = t * (i % 2 === 0 ? 2.4 : -3.1);
           rig.magicRings[i].rotation.z = Math.sin(t * 1.8 + i) * 0.35;
+        }
+
+        // 11) PHYSICAL ENEMY ATTACK ANIMATION (Weapon Arm Swing / Creature Lunge Bite!)
+        if (root.userData.attackAnimTimer > 0) {
+          root.userData.attackAnimTimer = Math.max(0, root.userData.attackAnimTimer - dt);
+          const ap = Math.sin((root.userData.attackAnimTimer / 0.38) * Math.PI);
+          if (rig.shR) rig.shR.rotation.x -= ap * 1.45;
+          if (rig.torso) rig.torso.rotation.x += ap * 0.32;
+          if (rig.head) rig.head.rotation.x += ap * 0.28;
         }
       }
 
@@ -2267,6 +2416,58 @@
             scene.traverse((o) => { if (o.isLight) activeWebGLLights++; });
             const perfPass = Boolean(activeWebGLLights <= 9 && renderer.getPixelRatio() <= 1.25 && !sunLight.castShadow && flashlight.castShadow);
             results.push({ name: `Performance Budget (${activeWebGLLights} WebGL Lights, DPR<=1.25, 1 ShadowMap)`, pass: perfPass });
+
+            // Permanent Test #33: Physical Weapon Attacks (No Circle Ring; Real Projectiles & Sword Swing!)
+            const noCircleRing = typeof attackRing === "undefined";
+            const savedWT = weaponTier;
+            weaponTier = 1;
+            player.position.set(12, 0, 20);
+            player.rotation.y = 0; // face -Z
+            const beforeProjCount = activeProjectiles.length;
+            fireWeaponAttack();
+            const spawnedBolt = activeProjectiles.length > beforeProjCount ? activeProjectiles[activeProjectiles.length - 1] : null;
+            const startBoltZ = spawnedBolt ? spawnedBolt.mesh.position.z : 0;
+            updateProjectiles(0.1, []);
+            const boltMoved = spawnedBolt && spawnedBolt.mesh.position.z < startBoltZ - 1.5;
+            if (spawnedBolt) spawnedBolt.alive = false;
+            updateProjectiles(0.01, []);
+            weaponTier = savedWT;
+            updateEquippedWeaponMesh();
+            results.push({ name: "Physical Weapon Attacks (No Circle Ring; Real Projectiles & Sword Swing)", pass: Boolean(noCircleRing && boltMoved) });
+
+            // Permanent Test #34: Physical Enemy Attacks (Witch Purple Lightning, Laser Bolt & Spider Lunge!)
+            let enemyPhysPass = false;
+            const witchObj = getMonsterByKey("Monster_Witch");
+            const spiderObj = getMonsterByKey("Monster_Spider");
+            if (witchObj && laserGuy && spiderObj) {
+              const wSaved = witchObj.position.clone();
+              const lSaved = laserGuy.position.clone();
+              const sSaved = spiderObj.position.clone();
+              player.position.set(12, 0, 25);
+              witchObj.position.set(12, 2.0, 20);
+              const wProj = performEnemyPhysicalAttack(witchObj, getMonsterState("Monster_Witch"), player);
+              laserGuy.position.set(14, 0, 20);
+              const lProj = performEnemyPhysicalAttack(laserGuy, getMonsterState("Monster_LaserGuy"), player);
+              spiderObj.position.set(12, 0, 22.5);
+              const sStartZ = spiderObj.position.z;
+              performEnemyPhysicalAttack(spiderObj, getMonsterState("Monster_Spider"), player);
+              const spiderLunged = spiderObj.position.z > sStartZ + 0.4;
+              enemyPhysPass = Boolean(wProj && wProj.kind === "purple_lightning" && lProj && lProj.kind === "laser" && spiderLunged);
+              if (wProj) wProj.alive = false;
+              if (lProj) lProj.alive = false;
+              updateProjectiles(0.01, []);
+              witchObj.position.copy(wSaved);
+              laserGuy.position.copy(lSaved);
+              spiderObj.position.copy(sSaved);
+            }
+            results.push({ name: "Physical Enemy Attacks (Witch Purple Lightning, Laser Bolt & Spider Lunge)", pass: enemyPhysPass });
+
+            // Permanent Test #35: Hero HP Bar (Bottom-Right) + Enemy HP Bar (Top-Center)!
+            const hpLayoutPass = Boolean(
+              heroHpPanelEl && heroHpPanelEl.style.bottom === "16px" && heroHpPanelEl.style.right === "16px" &&
+              enemyHpBarEl && enemyHpBarEl.style.top === "14px"
+            );
+            results.push({ name: "Hero HP Bar (Bottom-Right) + Enemy HP Bar (Top-Center)", pass: hpLayoutPass });
             isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
@@ -2875,9 +3076,23 @@
           if (legR) legR.rotation.x *= 0.8;
           if (armL) armL.rotation.x = weaponTier > 0 ? THREE.MathUtils.lerp(armL.rotation.x, 0.55, 0.2) : armL.rotation.x * 0.8;
         }
-        // Dramatic weapon slash / blaster recoil when pressing Q!
-        if (armL && weaponTier > 0 && attackFlashTimer > 0) {
-          armL.rotation.x = 0.55 + Math.sin((attackFlashTimer / 0.35) * Math.PI) * (weaponTier === 2 ? 1.35 : -0.45);
+        // Dramatic physical hero attack motion (sword sweeping slash, gun recoil kick, or flashlight jab!)
+        if (attackFlashTimer > 0) {
+          const swingP = Math.sin((attackFlashTimer / 0.36) * Math.PI);
+          if (weaponTier === 2 && armL) {
+            // Wide physical Flame Sword horizontal + vertical slash!
+            armL.rotation.x = 0.55 + swingP * 1.45;
+            armL.rotation.y = -0.85 + swingP * 1.7;
+          } else if ((weaponTier === 1 || weaponTier === 3) && armL) {
+            // Physical Blaster / Freeze Ray recoil kickback!
+            armL.rotation.x = 0.55 - swingP * 0.55;
+            armL.rotation.y = 0;
+          } else if (armR) {
+            // Physical Flashlight Bash lunge!
+            armR.rotation.x = 0.96 + swingP * 0.75;
+          }
+        } else if (armL) {
+          armL.rotation.y *= 0.8;
         }
 
         // Update Flashlight beam directly from the flashlight in his hand pointing forward (-Z local)
@@ -3365,15 +3580,10 @@
         camera.position.lerp(window._targetCamPos, 0.12);
         camera.lookAt(player.position.x, player.position.y + 1.0, player.position.z);
 
-        // Update weapon attack ring flash, 3D weapon trigger VFX & stun timer!
+        // Update 3D weapon trigger VFX, flying projectiles & attack timer!
         updateWeaponVFX(dt);
         if (attackFlashTimer > 0) {
           attackFlashTimer -= dt;
-          attackRing.scale.setScalar(1.0 + (0.35 - attackFlashTimer) * 4.0);
-          if (attackFlashTimer <= 0) {
-            attackRing.visible = false;
-            attackRing.scale.setScalar(1.0);
-          }
         }
         if (monsterStunTimer > 0) monsterStunTimer -= dt;
         const animT = clock.elapsedTime;
@@ -3381,6 +3591,7 @@
         const animList = [clown, laserGuy, slimeGuy, shadowGuy, ghostGuy];
         for (const d of labMonsterDefs) if (d.obj) animList.push(d.obj);
         for (const b of houseBossDefs) if (b.obj) animList.push(b.obj);
+        updateProjectiles(dt, animList);
         for (const mObj of animList) {
           if (!mObj || !mObj.visible) continue;
           const distSq = (mObj.position.x - player.position.x) ** 2 + (mObj.position.z - player.position.z) ** 2;
@@ -3448,7 +3659,7 @@
           updateHeroHpUI();
         }
 
-        // Bad Guys Attack Back when undefeated (hp > 0) & in range outside in the forest!
+        // Bad Guys Physically Attack Back (Ranged Lasers/Purple Lightning/Fireballs OR Physical Lunges/Weapon Swings!)
         if (!safeIndoors && monsterStunTimer <= 0) {
           for (const mObj of allActiveMonsters) {
             if (!mObj || !mObj.visible) continue;
@@ -3457,49 +3668,39 @@
             const dAtk = Math.hypot(mObj.position.x - player.position.x, mObj.position.z - player.position.z);
             if (dAtk <= st.range && nowMs - st.lastAtk > 1900) {
               st.lastAtk = nowMs;
-              spawnEnemyAttackVFX(mObj, st.color);
-              playMonsterSFX(mObj.name);
-              const info = BAD_GUYS_CATALOG.find((g) => g.key === mObj.name);
-              damageHero(st.dmg, info ? `${info.emoji} ${info.name}` : mObj.name);
+              performEnemyPhysicalAttack(mObj, st, player);
             }
           }
         }
 
-        // Live Bad Guy Zone Picture Card — shows picture, weapon & live HP bar when you're in their zone!
-        let nearestZoneMonster = null;
-        let nearestZoneDist = 11.5;
+        // Top-Center Enemy Target Health Bar (clean HP readout when fighting/near a bad guy!)
+        let nearestEnemy = null;
+        let nearestEnemyDist = 13.0;
         for (const mObj of allActiveMonsters) {
           if (!mObj || !mObj.visible) continue;
           const dZ = Math.hypot(mObj.position.x - player.position.x, mObj.position.z - player.position.z);
-          if (dZ < nearestZoneDist) {
-            nearestZoneDist = dZ;
-            nearestZoneMonster = mObj;
+          if (dZ < nearestEnemyDist) {
+            nearestEnemyDist = dZ;
+            nearestEnemy = mObj;
           }
         }
-        if (zoneCardEl) {
-          if (nearestZoneMonster) {
-            zoneCardEl.style.display = "block";
-            if (currentZoneKey !== nearestZoneMonster.name) {
-              currentZoneKey = nearestZoneMonster.name;
-              const info = BAD_GUYS_CATALOG.find((g) => g.key === currentZoneKey);
-              if (zoneNameEl) zoneNameEl.textContent = info ? `${info.emoji} ${info.name}` : currentZoneKey;
-              drawZonePortrait(currentZoneKey);
+        if (enemyHpBarEl) {
+          if (nearestEnemy) {
+            const zSt = getMonsterState(nearestEnemy.name);
+            const info = BAD_GUYS_CATALOG.find((g) => g.key === nearestEnemy.name);
+            const label = info ? `${info.emoji} ${info.name}` : nearestEnemy.name;
+            enemyHpBarEl.style.display = "block";
+            if (enemyHpTitleEl) {
+              enemyHpTitleEl.textContent = zSt.hp <= 0
+                ? `${label} — 💫 DEFEATED! Walk close to capture!`
+                : `${label} (${zSt.atk}) — ❤️ ${zSt.hp}/${zSt.maxHp}`;
             }
-            const zSt = getMonsterState(nearestZoneMonster.name);
-            if (zoneAtkEl) zoneAtkEl.textContent = zSt.atk;
-            if (zoneHpFillEl) {
-              const zPct = (zSt.hp / zSt.maxHp) * 100;
-              zoneHpFillEl.style.width = `${zPct}%`;
-              zoneHpFillEl.style.background = zSt.hp <= 0 ? "#facc15" : "#ef4444";
-            }
-            if (zoneDistEl) {
-              zoneDistEl.textContent = zSt.hp <= 0
-                ? `💫 CAPTURE ME! (${nearestZoneDist.toFixed(1)}m)`
-                : `❤️ HP: ${zSt.hp}/${zSt.maxHp} • ${nearestZoneDist.toFixed(1)}m`;
+            if (enemyHpFillEl) {
+              enemyHpFillEl.style.width = `${(zSt.hp / zSt.maxHp) * 100}%`;
+              enemyHpFillEl.style.background = zSt.hp <= 0 ? "#facc15" : "linear-gradient(90deg,#ef4444,#f97316)";
             }
           } else {
-            zoneCardEl.style.display = "none";
-            currentZoneKey = null;
+            enemyHpBarEl.style.display = "none";
           }
         }
 
