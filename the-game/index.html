@@ -2514,12 +2514,11 @@
             }
             results.push({ name: "Physics: Caged Bad Guys Immune to Attack Knockback", pass: cagedImmunePass });
 
-            // Permanent Test #37: Witch Dress Mesh + Active Chase + Captured Follow!
+            // Permanent Test #37: Witch (No Dress, Articulated Legs) + Active Chase + Captured Follow!
             let witchTestPass = false;
             const wObj = getMonsterByKey("Monster_Witch");
-            const wDress = gltf.scene.getObjectByName("Witch_DressSkirtOuter");
-            const wRuffle = gltf.scene.getObjectByName("Witch_Ruffle_0");
-            if (wObj && wDress && wRuffle) {
+            const wNoDress = !gltf.scene.getObjectByName("Witch_DressSkirtOuter") && Boolean(gltf.scene.getObjectByName("Witch_HipPivot_L"));
+            if (wObj && wNoDress) {
               const wSavedPos = wObj.position.clone();
               const wSt = getMonsterState("Monster_Witch");
               const wSavedHp = wSt.hp;
@@ -2550,7 +2549,7 @@
               wSt.hp = wSavedHp;
               wObj.position.copy(wSavedPos);
             }
-            results.push({ name: "Witch Dress + Active Chase & Captured Follow", pass: witchTestPass });
+            results.push({ name: "Witch (No Dress) + Active Chase & Captured Follow", pass: witchTestPass });
             isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
