@@ -68,10 +68,16 @@ test.describe("The Game — 3D Collision & Movement Tests", () => {
     expect(objectBlocked.endZ).toBeGreaterThan(objectBlocked.centerZ);
   });
 
-  test("house test: can walk through house door and see crafting table, portal, and laser guy", async ({ page }) => {
+  test("full 36-check physics, combat, audio, UI & performance suite passes on dev", async ({ page }) => {
+    const errors = [];
+    page.on("pageerror", (err) => errors.push(err.message));
+    page.on("console", (msg) => {
+      if (msg.type() === "error") errors.push(msg.text());
+    });
     await page.goto("/the-game/index.html?test=house");
     const badge = page.locator("#autotest-results");
-    await expect(badge).toBeVisible({ timeout: 15000 });
+    await expect(badge).toBeVisible({ timeout: 20000 });
+    expect(errors).toEqual([]);
     await expect(badge).toContainText("ALL COLLISION TESTS PASSED");
     await expect(badge).toContainText("House Door + Crafting Table + Portal");
     await expect(badge).toContainText("Laser Guy");
@@ -85,9 +91,15 @@ test.describe("The Game — 3D Collision & Movement Tests", () => {
     await expect(badge).toContainText("Bad Guys Blocked by Solid Walls");
     await expect(badge).toContainText("Bad Guys Blocked by Trees");
     await expect(badge).toContainText("Monster Physics & Sliding Engine Active");
+    await expect(badge).toContainText("Dark Flashlight-Only Mode + Outside Attack");
+    await expect(badge).toContainText("All 21 Bad Guys Out + Bad Guys Gallery Bar");
+    await expect(badge).toContainText("Dedicated Light on Every Thing");
+    await expect(badge).toContainText("Every Single Bad Guy Faces Forward (21/21)");
+    await expect(badge).toContainText("Smooth Hero Hair + Lab Cauldrons + Compact Map");
     await expect(badge).toContainText("All 3 Blender 3D Shop Weapons Loaded & Equippable");
     await expect(badge).toContainText("Air & Tree Pickup + Follow (Witch, Bat, Spider)");
     await expect(badge).toContainText("3D Weapon Trigger VFX + Unique Weapon SFX (All 4 Tiers)");
+    await expect(badge).toContainText("Hamburger Menu (Controls, Weapons & 21 Bad Guys)");
     await expect(badge).toContainText("Lab South Wall Blocks Player & Monsters (Left & Right)");
     await expect(badge).toContainText("Invisible Forest Boundary Blocks All 4 Edges");
     await expect(badge).toContainText("Hero & Monster Health + Defeat-Before-Capture + Help + Enemy Weapons");
