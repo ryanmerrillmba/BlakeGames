@@ -556,6 +556,17 @@
         return horizDist < 0.45 && monsterObj.position.y >= 0.05 && monsterObj.position.y <= 1.6;
       }
 
+      function isMonsterCaged(monsterObj) {
+        if (!monsterObj) return false;
+        if (monsterObj.userData && monsterObj.userData.caged) return true;
+        if (monsterObj === clown && clownInCage) return true;
+        if (monsterObj === laserGuy && laserInCage) return true;
+        if (monsterObj === slimeGuy && slimeInCage) return true;
+        if (monsterObj === shadowGuy && shadowInCage) return true;
+        if (monsterObj === ghostGuy && ghostInCage) return true;
+        return false;
+      }
+
       function isCageCapSealed(capObj, cagePos) {
         if (!capObj || !cagePos) return false;
         const horizDist = Math.hypot(capObj.position.x - cagePos.x, capObj.position.z - cagePos.z);
@@ -854,7 +865,7 @@
             }
           } else if (!p.fromEnemy && monsterList) {
             for (const m of monsterList) {
-              if (!m || !m.visible) continue;
+              if (!m || !m.visible || isMonsterCaged(m)) continue;
               const dM = Math.hypot(p.mesh.position.x - m.position.x, p.mesh.position.z - m.position.z);
               if (dM < 1.35) {
                 const len = Math.hypot(p.vx, p.vz) || 1;
@@ -984,7 +995,7 @@
         let hitCount = 0;
         let defeatedCount = 0;
         for (const m of allM) {
-          if (!m || !m.visible) continue;
+          if (!m || !m.visible || isMonsterCaged(m)) continue;
           const dxM = m.position.x - player.position.x;
           const dzM = m.position.z - player.position.z;
           const d = Math.hypot(dxM, dzM);
@@ -2468,6 +2479,38 @@
               enemyHpBarEl && enemyHpBarEl.style.top === "14px"
             );
             results.push({ name: "Hero HP Bar (Bottom-Right) + Enemy HP Bar (Top-Center)", pass: hpLayoutPass });
+
+            // Permanent Test #36: Caged Bad Guys Cannot Be Knocked Out of Their Tubes by Attacks!
+            let cagedImmunePass = false;
+            if (clown && podCap0) {
+              const savedPos = clown.position.clone();
+              const savedCapPos = podCap0.position.clone();
+              const savedCapRot = podCap0.rotation.clone();
+              const savedWT2 = weaponTier;
+              placeMonsterInCage(clown, firstPodPos, podCap0, false);
+              const cagedStartPos = clown.position.clone();
+              // Stand right in front of the tube & attack with Flame Sword melee + Shock Blaster projectile + direct knockback!
+              player.position.set(firstPodPos.x, 0, firstPodPos.z + 2.2);
+              player.rotation.y = 0; // face -Z toward tube
+              weaponTier = 2;
+              fireWeaponAttack();
+              weaponTier = 1;
+              fireWeaponAttack();
+              updateProjectiles(0.15, [clown]);
+              moveMonsterSafe(clown, 3.0, 3.0);
+              const movedDist = clown.position.distanceTo(cagedStartPos);
+              cagedImmunePass = isMonsterInsideCage(clown, firstPodPos) && movedDist < 0.001;
+              // Clean up synthetic projectile & restore
+              for (const pr of activeProjectiles) pr.alive = false;
+              updateProjectiles(0.01, []);
+              weaponTier = savedWT2;
+              updateEquippedWeaponMesh();
+              clown.position.copy(savedPos);
+              clown.userData.caged = false;
+              podCap0.position.copy(savedCapPos);
+              podCap0.rotation.copy(savedCapRot);
+            }
+            results.push({ name: "Physics: Caged Bad Guys Immune to Attack Knockback", pass: cagedImmunePass });
             isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
@@ -2940,7 +2983,7 @@
       }
 
       function moveMonsterSafe(monsterObj, stepX, stepZ, opts = {}) {
-        if (!monsterObj) return false;
+        if (!monsterObj || isMonsterCaged(monsterObj)) return false;
         const radius = opts.radius || MONSTER_RADIUS;
         const maxZ = 204.5;
         const maxX = monsterObj.position.z > 4.0 ? 100.5 : 12.2;
