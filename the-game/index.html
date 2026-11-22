@@ -3254,7 +3254,7 @@
           const def = labMonsterDefs[labQueueIdx];
           if (def && def.obj) {
             def.obj.visible = true;
-            if (def.flies && !activeLabThrowing) {
+            if (def.flies && !activeLabThrowing && !activeLabCaptured) {
               def.obj.position.y = 1.9 + Math.sin(clock.elapsedTime * 5) * 0.35;
               if (def.key === "Monster_Bat") {
                 const wl = def.obj.getObjectByName("Bat_WingPivot_L");
@@ -3295,13 +3295,15 @@
               const dzM = player.position.z - def.obj.position.z;
               const distM = Math.hypot(dxM, dzM);
               const pickupR = getPickupRadius(def.obj, def.flies);
-              if (distM < 11.0 && distM >= pickupR) {
+              const chaseRange = def.flies ? 22.0 : 12.0;
+              const chaseSpd = def.flies ? 3.2 : 2.4;
+              if (distM < chaseRange && distM >= pickupR) {
                 // Spider jumps down from the tree when you get close!
                 if (def.key === "Monster_Spider" && def.obj.position.y > 0.05) {
                   def.obj.position.y = Math.max(0, def.obj.position.y - 6.0 * dt);
                   objectiveEl.textContent = "🕷️ WHOA! The Spider JUMPED DOWN from the tree to get you!";
                 }
-                moveMonsterSafe(def.obj, (dxM / distM) * 2.4 * dt, (dzM / distM) * 2.4 * dt, { wallsOnly: def.flies || def.obj.position.y > 0.35 });
+                moveMonsterSafe(def.obj, (dxM / distM) * chaseSpd * dt, (dzM / distM) * chaseSpd * dt, { wallsOnly: def.flies || def.obj.position.y > 0.35 });
                 faceMonsterForward(def.obj, dxM, dzM);
               }
               if (canPickupMonster(def.obj, player, def.flies)) {
