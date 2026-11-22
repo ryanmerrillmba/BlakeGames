@@ -169,7 +169,7 @@
           <button id="attack-btn" type="button" style="width:100%;background:#a855f7;color:#ffffff;border:none;border-radius:9px;padding:9px 12px;font-weight:800;font-size:0.92rem;cursor:pointer;text-align:left;">🔦 Flashlight Blast (Q)</button>
           <button id="shop-btn" type="button" style="width:100%;background:#f59e0b;color:#0f172a;border:none;border-radius:9px;padding:9px 12px;font-weight:800;font-size:0.92rem;cursor:pointer;text-align:left;">🛒 Buy Crazy Weapon ($10)</button>
           <button id="battle-btn" type="button" style="width:100%;background:#ef4444;color:#ffffff;border:none;border-radius:9px;padding:9px 12px;font-weight:800;font-size:0.92rem;cursor:pointer;text-align:left;">⚔️ Fight Outside!</button>
-          <button id="badguys-bar" type="button" style="width:100%;background:linear-gradient(90deg,#7c3aed,#ef4444,#f59e0b);color:#ffffff;border:1.5px solid #fef08a;border-radius:9px;padding:10px 12px;font-weight:900;font-size:0.92rem;cursor:pointer;text-align:left;">👾 See All 21 Bad Guys!</button>
+          <button id="badguys-bar" type="button" style="width:100%;background:linear-gradient(90deg,#7c3aed,#ef4444,#f59e0b);color:#ffffff;border:1.5px solid #fef08a;border-radius:9px;padding:10px 12px;font-weight:900;font-size:0.92rem;cursor:pointer;text-align:left;">👾 See All 20 Bad Guys!</button>
           <button id="help-btn" type="button" style="width:100%;background:#10b981;color:#052e16;border:none;border-radius:9px;padding:9px 12px;font-weight:900;font-size:0.92rem;cursor:pointer;text-align:left;">❓ Help / How to Play</button>
         </div>
       </div>
@@ -201,10 +201,10 @@
     <div id="badguys-modal" style="display:none;position:fixed;inset:0;z-index:80;background:rgba(2,6,14,0.94);backdrop-filter:blur(8px);overflow-y:auto;padding:24px;box-sizing:border-box;">
       <div style="max-width:960px;margin:0 auto;background:#0f172a;border:2px solid #f59e0b;border-radius:18px;padding:20px;color:#f8fafc;box-shadow:0 0 40px rgba(245,158,11,0.35);">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-          <h2 style="margin:0;font-size:1.5rem;color:#fde047;">👾 ALL 21 BAD GUYS IN THE GAME</h2>
+          <h2 style="margin:0;font-size:1.5rem;color:#fde047;">👾 ALL 20 BAD GUYS IN THE GAME</h2>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button id="pull-vampire-btn" type="button" style="background:#dc2626;color:#ffffff;border:none;border-radius:10px;padding:8px 14px;font-size:0.95rem;font-weight:900;cursor:pointer;">🧛 Pull Up Vampire in Lab</button>
-            <button id="bring-all-lab-btn" type="button" style="background:#7c3aed;color:#ffffff;border:none;border-radius:10px;padding:8px 14px;font-size:0.95rem;font-weight:900;cursor:pointer;">🏠 Bring ALL 21 Guys to Lab!</button>
+            <button id="bring-all-lab-btn" type="button" style="background:#7c3aed;color:#ffffff;border:none;border-radius:10px;padding:8px 14px;font-size:0.95rem;font-weight:900;cursor:pointer;">🏠 Bring ALL 20 Guys to Lab!</button>
             <button id="badguys-close-btn" type="button" style="background:#334155;color:#ffffff;border:none;border-radius:10px;padding:8px 16px;font-size:0.95rem;font-weight:900;cursor:pointer;">✕ Close</button>
           </div>
         </div>
@@ -505,7 +505,6 @@
       // 9 Lab Monsters queue (Pods 4..12) unlocked one by one after Slime Guy!
       const labMonsterDefs = [
         { key: "Monster_Vampire", label: "🧛 Vampire", podIdx: 3, flies: false },
-        { key: "Monster_Witch", label: "🧙 Witch", podIdx: 4, flies: false },
         { key: "Monster_Pumpkin", label: "🎃 Pumpkin", podIdx: 5, flies: false },
         { key: "Monster_Cat", label: "🐈‍⬛ Cat", podIdx: 6, flies: false },
         { key: "Monster_Bat", label: "🦇 Bat", podIdx: 7, flies: true },
@@ -1083,7 +1082,6 @@
         { key: "Monster_LaserGuy", emoji: "🤖", name: "Red Laser Guy", desc: "Crimson sci-fi power armor & glowing plasma laser rifle" },
         { key: "Monster_SlimeGuy", emoji: "🟢", name: "Slime Guy", desc: "Translucent clearcoat slime with 12 floating bubbles" },
         { key: "Monster_Vampire", emoji: "🧛", name: "Vampire", desc: "Count Dracula tuxedo, flared crimson collar & sharp fangs" },
-        { key: "Monster_Witch", emoji: "🧙", name: "Witch", desc: "Crooked pointed hat, green skin & flying broomstick" },
         { key: "Monster_Pumpkin", emoji: "🎃", name: "Pumpkin", desc: "10-lobed glowing carved Jack-o-Lantern on creeping vines" },
         { key: "Monster_Cat", emoji: "🐈‍⬛", name: "Spooky Cat", desc: "Sleek black feline with glowing emerald eyes & whiskers" },
         { key: "Monster_Bat", emoji: "🦇", name: "Bat", desc: "Ribbed webbed wings, sharp fangs & ultrasonic squeak" },
@@ -1322,7 +1320,6 @@
         Monster_LaserGuy:      { maxHp: 4, dmg: 10, range: 12.0, atk: "🔫 Red Laser Bolt", color: 0xff1122, mode: "ranged", projKind: "laser", projSpeed: 22 },
         Monster_SlimeGuy:      { maxHp: 4, dmg: 8,  range: 3.5, atk: "🟢 Leaping Slime Slam", color: 0x4ade80, mode: "lunge" },
         Monster_Vampire:       { maxHp: 4, dmg: 10, range: 3.2, atk: "🗡️ Blood-Ruby Rapier", color: 0xdc2626, mode: "melee" },
-        Monster_Witch:         { maxHp: 4, dmg: 9,  range: 11.5, atk: "⚡ Purple Lightning", color: 0xc084fc, mode: "ranged", projKind: "purple_lightning", projSpeed: 18 },
         Monster_Pumpkin:       { maxHp: 4, dmg: 9,  range: 9.5, atk: "🔥 Flaming Fireball", color: 0xf97316, mode: "ranged", projKind: "fireball", projSpeed: 16 },
         Monster_Cat:           { maxHp: 3, dmg: 7,  range: 3.2, atk: "🐾 Pouncing Claw Swipe", color: 0x86efac, mode: "lunge" },
         Monster_Bat:           { maxHp: 3, dmg: 7,  range: 3.6, atk: "🦇 Swooping Fang Bite", color: 0xf43f5e, mode: "lunge" },
@@ -1920,7 +1917,7 @@
       // Really short (0.12s-0.30s) unique signature sound effect for EVERY SINGLE MONSTER!
       const MONSTER_SFX_KEYS = [
         "Monster_Clown", "Monster_LaserGuy", "Monster_SlimeGuy",
-        "Monster_Vampire", "Monster_Witch", "Monster_Pumpkin", "Monster_Cat",
+        "Monster_Vampire", "Monster_Pumpkin", "Monster_Cat",
         "Monster_Bat", "Monster_Spider", "Monster_Skeleton", "Monster_Eyeball",
         "Monster_Robot", "Monster_Frankenstein", "Monster_Zombie", "Monster_Werewolf",
         "Monster_Mummy", "Monster_ShadowGuy", "Monster_Ghost",
@@ -2307,7 +2304,7 @@
             }).length;
             results.push({ name: `Lifelike Articulated Monster Rigs (${riggedCount}/${allMonstersForTest.length})`, pass: riggedCount === allMonstersForTest.length && riggedCount >= 18 });
             results.push({ name: "Stereo Background Music (Spooky + Boss Crossfade)", pass: Boolean(musicSpooky && musicBoss && musicBtn) });
-            results.push({ name: `Collision, Flashlight & ${MONSTER_SFX_KEYS.length} Monster SFX`, pass: Boolean(typeof playWallBump === "function" && typeof playTreeChop === "function" && typeof playFlashlightSpot === "function" && MONSTER_SFX_KEYS.length === 21) });
+            results.push({ name: `Collision, Flashlight & ${MONSTER_SFX_KEYS.length} Monster SFX`, pass: Boolean(typeof playWallBump === "function" && typeof playTreeChop === "function" && typeof playFlashlightSpot === "function" && MONSTER_SFX_KEYS.length === 20) });
 
             // Monster Physics Tests: verify bad guys CANNOT run through solid walls or trees!
             let monsterWallPass = false;
@@ -2340,9 +2337,9 @@
             results.push({ name: "Monster Physics & Sliding Engine Active", pass: monsterPhysicsPass });
             results.push({ name: "Dark Flashlight-Only Mode + Outside Attack", pass: Boolean(ambient.intensity <= 0.05 && flashlight.intensity >= 100 && document.getElementById("attack-btn")) });
             const oneAtATimePass = Boolean(clown && clown.visible && laserGuy && !laserGuy.visible && slimeGuy && !slimeGuy.visible && houseBossDefs.every((b) => b.obj && !b.obj.visible));
-            results.push({ name: "One-at-a-Time Boss Progression + Bad Guys Gallery Bar", pass: Boolean(BAD_GUYS_CATALOG.length === 21 && badGuysBar && badGuysModal && oneAtATimePass) });
+            results.push({ name: "One-at-a-Time Boss Progression + Bad Guys Gallery Bar", pass: Boolean(BAD_GUYS_CATALOG.length === 20 && badGuysBar && badGuysModal && oneAtATimePass) });
             results.push({ name: `Dedicated Light on Every Thing (${thingLights.length} lights)`, pass: thingLights.length >= 16 });
-            results.push({ name: `Every Single Bad Guy Faces Forward (${allMonstersForTest.length}/21)`, pass: Boolean(typeof faceMonsterForward === "function" && allMonstersForTest.length === 21) });
+            results.push({ name: `Every Single Bad Guy Faces Forward (${allMonstersForTest.length}/20)`, pass: Boolean(typeof faceMonsterForward === "function" && allMonstersForTest.length === 20) });
             const hasSmoothHair = Boolean(gltf.scene.getObjectByName("Human_SmoothHair") && !gltf.scene.getObjectByName("Human_HairBang"));
             const hasCauldrons = Boolean(gltf.scene.getObjectByName("Lab_Cauldron_Rim_0") && gltf.scene.getObjectByName("Lab_Cauldron_Rim_10"));
             results.push({ name: "Smooth Hero Hair + Lab Cauldrons + Compact Map", pass: Boolean(hasSmoothHair && hasCauldrons && minimapCanvas.width <= 120 && !document.getElementById("zone-card") && labPodLights.length >= 10) });
@@ -2500,32 +2497,32 @@
             updateEquippedWeaponMesh();
             results.push({ name: "Physical Weapon Attacks (No Circle Ring; Real Projectiles & Sword Swing)", pass: Boolean(noCircleRing && boltMoved) });
 
-            // Permanent Test #34: Physical Enemy Attacks (Witch Purple Lightning, Laser Bolt & Spider Lunge!)
+            // Permanent Test #34: Physical Enemy Attacks (Eyeball Purple Lightning, Laser Bolt & Spider Lunge!)
             let enemyPhysPass = false;
-            const witchObj = getMonsterByKey("Monster_Witch");
+            const eyeObj = getMonsterByKey("Monster_Eyeball");
             const spiderObj = getMonsterByKey("Monster_Spider");
-            if (witchObj && laserGuy && spiderObj) {
-              const wSaved = witchObj.position.clone();
+            if (eyeObj && laserGuy && spiderObj) {
+              const eSaved = eyeObj.position.clone();
               const lSaved = laserGuy.position.clone();
               const sSaved = spiderObj.position.clone();
               player.position.set(12, 0, 25);
-              witchObj.position.set(12, 2.0, 20);
-              const wProj = performEnemyPhysicalAttack(witchObj, getMonsterState("Monster_Witch"), player);
+              eyeObj.position.set(12, 2.0, 20);
+              const eProj = performEnemyPhysicalAttack(eyeObj, getMonsterState("Monster_Eyeball"), player);
               laserGuy.position.set(14, 0, 20);
               const lProj = performEnemyPhysicalAttack(laserGuy, getMonsterState("Monster_LaserGuy"), player);
               spiderObj.position.set(12, 0, 22.5);
               const sStartZ = spiderObj.position.z;
               performEnemyPhysicalAttack(spiderObj, getMonsterState("Monster_Spider"), player);
               const spiderLunged = spiderObj.position.z > sStartZ + 0.4;
-              enemyPhysPass = Boolean(wProj && wProj.kind === "purple_lightning" && lProj && lProj.kind === "laser" && spiderLunged);
-              if (wProj) wProj.alive = false;
+              enemyPhysPass = Boolean(eProj && eProj.kind === "purple_lightning" && lProj && lProj.kind === "laser" && spiderLunged);
+              if (eProj) eProj.alive = false;
               if (lProj) lProj.alive = false;
               updateProjectiles(0.01, []);
-              witchObj.position.copy(wSaved);
+              eyeObj.position.copy(eSaved);
               laserGuy.position.copy(lSaved);
               spiderObj.position.copy(sSaved);
             }
-            results.push({ name: "Physical Enemy Attacks (Witch Purple Lightning, Laser Bolt & Spider Lunge)", pass: enemyPhysPass });
+            results.push({ name: "Physical Enemy Attacks (Eyeball Purple Lightning, Laser Bolt & Spider Lunge)", pass: enemyPhysPass });
 
             // Permanent Test #35: Hero HP Bar (Bottom-Right) + Enemy HP Bar (Top-Center)!
             const hpLayoutPass = Boolean(
@@ -2566,56 +2563,52 @@
             }
             results.push({ name: "Physics: Caged Bad Guys Immune to Attack Knockback", pass: cagedImmunePass });
 
-            // Permanent Test #37: Killing the Witch First Makes Her Move/Follow & Go Into a Cauldron Cage!
-            let witchTestPass = false;
-            const wObj = getMonsterByKey("Monster_Witch");
-            const wNoDress = !gltf.scene.getObjectByName("Witch_DressSkirtOuter") && Boolean(gltf.scene.getObjectByName("Witch_HipPivot_L"));
-            if (wObj && wNoDress && labPodPositions[4]) {
-              const wSavedPos = wObj.position.clone();
-              const wSavedVis = wObj.visible;
-              const wSt = getMonsterState("Monster_Witch");
-              const wSavedHp = wSt.hp;
-              const wSavedFollow = Boolean(wObj.userData.defeatedFollow);
-              const wCap4 = podCaps[4];
-              const wCapPos = wCap4 ? wCap4.position.clone() : null;
-              wObj.visible = true;
-              wSt.hp = wSt.maxHp;
-              wObj.userData.defeatedFollow = false;
-              wObj.userData.caged = false;
-              wObj.position.set(20, 0.0, 20);
+            // Permanent Test #37: Witch Removed + Defeated Vampire Walks & Goes Into Cauldron Cage!
+            let killFollowPass = false;
+            const vObj = getMonsterByKey("Monster_Vampire");
+            const witchDeleted = !gltf.scene.getObjectByName("Monster_Witch");
+            if (vObj && witchDeleted && labPodPositions[3]) {
+              const vSavedPos = vObj.position.clone();
+              const vSavedVis = vObj.visible;
+              const vSt = getMonsterState("Monster_Vampire");
+              const vSavedHp = vSt.hp;
+              const vSavedFollow = Boolean(vObj.userData.defeatedFollow);
+              const vCap3 = podCaps[3];
+              const vCapPos = vCap3 ? vCap3.position.clone() : null;
+              vObj.visible = true;
+              vSt.hp = vSt.maxHp;
+              vObj.userData.defeatedFollow = false;
+              vObj.userData.caged = false;
+              vObj.position.set(20, 0.0, 20);
               player.position.set(20, 0, 28);
-              const notFollowingBeforeKill = !wObj.userData.defeatedFollow;
-              // Kill the Witch FIRST using damageMonster!
-              damageMonster(wObj, wSt.maxHp);
-              const followingAfterKill = Boolean(wSt.hp === 0 && wObj.userData.defeatedFollow);
-              // Walk the hero 12m away — Witch MUST physically WALK on the ground with swinging legs!
-              let witchLegSwung = false;
-              const wRig = getMonsterRig(wObj);
+              const notFollowingBeforeKill = !vObj.userData.defeatedFollow;
+              damageMonster(vObj, vSt.maxHp);
+              const followingAfterKill = Boolean(vSt.hp === 0 && vObj.userData.defeatedFollow);
+              let legSwung = false;
+              const vRig = getMonsterRig(vObj);
               for (let i = 0; i < 60; i++) {
                 player.position.z += 0.2;
                 player.position.x += 0.05;
-                if (wObj.userData.defeatedFollow) {
-                  followCapturedMonster(wObj, player, 0.24, 0.97, 0.05, { flies: false, followDist: 2.0 });
-                  updateLifelikeMonster(wObj, 0.05, i * 0.05, player);
-                  if (wRig.hipL && Math.abs(wRig.hipL.rotation.x) > 0.15) witchLegSwung = true;
+                if (vObj.userData.defeatedFollow) {
+                  followCapturedMonster(vObj, player, 0.24, 0.97, 0.05, { flies: false, followDist: 2.0 });
+                  updateLifelikeMonster(vObj, 0.05, i * 0.05, player);
+                  if (vRig.hipL && Math.abs(vRig.hipL.rotation.x) > 0.15) legSwung = true;
                 }
               }
-              const followEndDist = Math.hypot(player.position.x - wObj.position.x, player.position.z - wObj.position.z);
-              // Now walk up to Cauldron Cage 4 & put her inside it!
-              player.position.set(labPodPositions[4].x, 0, labPodPositions[4].z + 2.5);
+              const followEndDist = Math.hypot(player.position.x - vObj.position.x, player.position.z - vObj.position.z);
+              player.position.set(labPodPositions[3].x, 0, labPodPositions[3].z + 2.5);
               const cagedNow = tryCageFollowingMonster();
-              const insideCauldron = isMonsterInsideCage(wObj, labPodPositions[4]);
-              const capOnTop = wCap4 ? isCageCapSealed(wCap4, labPodPositions[4]) : true;
-              witchTestPass = Boolean(notFollowingBeforeKill && followingAfterKill && witchLegSwung && followEndDist < 3.4 && cagedNow && insideCauldron && capOnTop);
-              // Restore cleanly
-              wSt.hp = wSavedHp;
-              wObj.userData.defeatedFollow = wSavedFollow;
-              wObj.userData.caged = false;
-              wObj.visible = wSavedVis;
-              wObj.position.copy(wSavedPos);
-              if (wCap4 && wCapPos) wCap4.position.copy(wCapPos);
+              const insideCauldron = isMonsterInsideCage(vObj, labPodPositions[3]);
+              const capOnTop = vCap3 ? isCageCapSealed(vCap3, labPodPositions[3]) : true;
+              killFollowPass = Boolean(notFollowingBeforeKill && followingAfterKill && legSwung && followEndDist < 3.4 && cagedNow && insideCauldron && capOnTop);
+              vSt.hp = vSavedHp;
+              vObj.userData.defeatedFollow = vSavedFollow;
+              vObj.userData.caged = false;
+              vObj.visible = vSavedVis;
+              vObj.position.copy(vSavedPos);
+              if (vCap3 && vCapPos) vCap3.position.copy(vCapPos);
             }
-            results.push({ name: "Witch Follows After Kill & Goes Into Cauldron Cage", pass: witchTestPass });
+            results.push({ name: "Witch Deleted + Killed Bad Guy Follows Into Cauldron Cage", pass: killFollowPass });
             isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
