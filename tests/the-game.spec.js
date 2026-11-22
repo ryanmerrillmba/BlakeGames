@@ -92,7 +92,7 @@ test.describe("The Game — 3D Collision & Movement Tests", () => {
     await expect(badge).toContainText("Bad Guys Blocked by Trees");
     await expect(badge).toContainText("Monster Physics & Sliding Engine Active");
     await expect(badge).toContainText("Dark Flashlight-Only Mode + Outside Attack");
-    await expect(badge).toContainText("All 21 Bad Guys Out + Bad Guys Gallery Bar");
+    await expect(badge).toContainText("One-at-a-Time Boss Progression + Bad Guys Gallery Bar");
     await expect(badge).toContainText("Dedicated Light on Every Thing");
     await expect(badge).toContainText("Every Single Bad Guy Faces Forward (21/21)");
     await expect(badge).toContainText("Smooth Hero Hair + Lab Cauldrons + Compact Map");

@@ -2003,16 +2003,17 @@
           slimeGuy = gltf.scene.getObjectByName("Monster_SlimeGuy");
           shadowGuy = gltf.scene.getObjectByName("Monster_ShadowGuy");
           ghostGuy = gltf.scene.getObjectByName("Monster_Ghost");
-          // Make ALL 21 bad guys visible & acting out in the dark forest!
-          if (laserGuy) laserGuy.visible = true;
-          if (slimeGuy) slimeGuy.visible = true;
-          if (shadowGuy) shadowGuy.visible = true;
-          if (ghostGuy) ghostGuy.visible = true;
+          // Strict One-at-a-Time Progression: ONLY Clown is out first! All future bad guys & bosses stay hidden & inactive until you beat & cage the one before them!
+          if (clown) clown.visible = true;
+          if (laserGuy) laserGuy.visible = false;
+          if (slimeGuy) slimeGuy.visible = false;
+          if (shadowGuy) shadowGuy.visible = false;
+          if (ghostGuy) ghostGuy.visible = false;
           const loftGhostCage = gltf.scene.getObjectByName("Loft_Cage_Base_2") || gltf.scene.getObjectByName("House_Cage_Base_1");
           if (loftGhostCage) rareCage2Pos.copy(loftGhostCage.position);
           for (const def of labMonsterDefs) {
             def.obj = gltf.scene.getObjectByName(def.key);
-            if (def.obj) def.obj.visible = true;
+            if (def.obj) def.obj.visible = false;
             const p = def.loftCageIdx !== undefined
               ? gltf.scene.getObjectByName(`Loft_Cage_Base_${def.loftCageIdx}`)
               : gltf.scene.getObjectByName(`Pod_Base_${def.podIdx}`);
@@ -2020,7 +2021,7 @@
           }
           for (const bdef of houseBossDefs) {
             bdef.obj = gltf.scene.getObjectByName(bdef.key);
-            if (bdef.obj) bdef.obj.visible = true;
+            if (bdef.obj) bdef.obj.visible = false;
             const c = gltf.scene.getObjectByName(`House_Cage_Base_${bdef.cageIdx}`);
             bdef.cagePos = c ? c.position.clone() : new THREE.Vector3(-10, 0, 30.8);
           }
@@ -2286,7 +2287,8 @@
             results.push({ name: "Bad Guys Blocked by Trees", pass: monsterTreePass });
             results.push({ name: "Monster Physics & Sliding Engine Active", pass: monsterPhysicsPass });
             results.push({ name: "Dark Flashlight-Only Mode + Outside Attack", pass: Boolean(ambient.intensity <= 0.05 && flashlight.intensity >= 100 && document.getElementById("attack-btn")) });
-            results.push({ name: "All 21 Bad Guys Out + Bad Guys Gallery Bar", pass: Boolean(BAD_GUYS_CATALOG.length === 21 && badGuysBar && badGuysModal && allMonstersForTest.every((m) => m.visible)) });
+            const oneAtATimePass = Boolean(clown && clown.visible && laserGuy && !laserGuy.visible && slimeGuy && !slimeGuy.visible && houseBossDefs.every((b) => b.obj && !b.obj.visible));
+            results.push({ name: "One-at-a-Time Boss Progression + Bad Guys Gallery Bar", pass: Boolean(BAD_GUYS_CATALOG.length === 21 && badGuysBar && badGuysModal && oneAtATimePass) });
             results.push({ name: `Dedicated Light on Every Thing (${thingLights.length} lights)`, pass: thingLights.length >= 16 });
             results.push({ name: `Every Single Bad Guy Faces Forward (${allMonstersForTest.length}/21)`, pass: Boolean(typeof faceMonsterForward === "function" && allMonstersForTest.length === 21) });
             const hasSmoothHair = Boolean(gltf.scene.getObjectByName("Human_SmoothHair") && !gltf.scene.getObjectByName("Human_HairBang"));
