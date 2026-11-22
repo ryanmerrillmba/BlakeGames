@@ -2513,6 +2513,44 @@
               podCap0.rotation.copy(savedCapRot);
             }
             results.push({ name: "Physics: Caged Bad Guys Immune to Attack Knockback", pass: cagedImmunePass });
+
+            // Permanent Test #37: Witch Dress Mesh + Active Chase + Captured Follow!
+            let witchTestPass = false;
+            const wObj = getMonsterByKey("Monster_Witch");
+            const wDress = gltf.scene.getObjectByName("Witch_DressSkirtOuter");
+            const wRuffle = gltf.scene.getObjectByName("Witch_Ruffle_0");
+            if (wObj && wDress && wRuffle) {
+              const wSavedPos = wObj.position.clone();
+              const wSt = getMonsterState("Monster_Witch");
+              const wSavedHp = wSt.hp;
+              // 1) Active chase when hero is 12m away
+              wObj.position.set(20, 2.0, 20);
+              player.position.set(20, 0, 32);
+              const startChaseDist = Math.hypot(player.position.x - wObj.position.x, player.position.z - wObj.position.z);
+              for (let i = 0; i < 20; i++) {
+                const dxW = player.position.x - wObj.position.x;
+                const dzW = player.position.z - wObj.position.z;
+                const dW = Math.hypot(dxW, dzW) || 1;
+                moveMonsterSafe(wObj, (dxW / dW) * 3.2 * 0.05, (dzW / dW) * 3.2 * 0.05, { wallsOnly: true });
+              }
+              const endChaseDist = Math.hypot(player.position.x - wObj.position.x, player.position.z - wObj.position.z);
+              const chasedCloser = endChaseDist < startChaseDist - 2.0;
+
+              // 2) Defeat & captured follow as hero walks 10m away & turns
+              wSt.hp = 0;
+              wObj.position.set(20, 2.0, 30);
+              const pickedWitch = canPickupMonster(wObj, player, true);
+              for (let i = 0; i < 50; i++) {
+                player.position.z += 0.2;
+                player.position.x += 0.06;
+                followCapturedMonster(wObj, player, 0.28, 0.96, 0.05, { flies: true, followDist: 2.0 });
+              }
+              const followEndDist = Math.hypot(player.position.x - wObj.position.x, player.position.z - wObj.position.z);
+              witchTestPass = Boolean(chasedCloser && pickedWitch && followEndDist < 3.6 && wObj.position.y > 1.0);
+              wSt.hp = wSavedHp;
+              wObj.position.copy(wSavedPos);
+            }
+            results.push({ name: "Witch Dress + Active Chase & Captured Follow", pass: witchTestPass });
             isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
