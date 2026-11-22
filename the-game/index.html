@@ -505,7 +505,7 @@
       // 9 Lab Monsters queue (Pods 4..12) unlocked one by one after Slime Guy!
       const labMonsterDefs = [
         { key: "Monster_Vampire", label: "🧛 Vampire", podIdx: 3, flies: false },
-        { key: "Monster_Witch", label: "🧙 Witch", podIdx: 4, flies: true },
+        { key: "Monster_Witch", label: "🧙 Witch", podIdx: 4, flies: false },
         { key: "Monster_Pumpkin", label: "🎃 Pumpkin", podIdx: 5, flies: false },
         { key: "Monster_Cat", label: "🐈‍⬛ Cat", podIdx: 6, flies: false },
         { key: "Monster_Bat", label: "🦇 Bat", podIdx: 7, flies: true },
@@ -600,7 +600,7 @@
         if (!m) return false;
         const pod = findNearestLabCauldron();
         if (!pod) return false;
-        const isFly = m.name === "Monster_Witch" || m.name === "Monster_Bat" || m.name === "Monster_Eyeball" || m.name === "Monster_ShadowGuy" || m.name === "Monster_Ghost" || m.name === "Monster_FlyingPumpkin";
+        const isFly = m.name === "Monster_Bat" || m.name === "Monster_Eyeball" || m.name === "Monster_ShadowGuy" || m.name === "Monster_Ghost" || m.name === "Monster_FlyingPumpkin";
         placeMonsterInCage(m, pod.pos, pod.cap, isFly);
         if (!isRunningAutoTest) {
           money += 10;
@@ -1154,7 +1154,7 @@
           const row = Math.floor(i / 7);
           const lx = -7.5 + col * 2.5;
           const lz = -14.0 - row * 3.4;
-          const isFly = key.includes("Bat") || key.includes("Eyeball") || key.includes("Flying") || key.includes("Shadow") || key.includes("Ghost") || key.includes("Witch");
+          const isFly = key.includes("Bat") || key.includes("Eyeball") || key.includes("Flying") || key.includes("Shadow") || key.includes("Ghost");
           m.position.set(lx, isFly ? 1.5 : 0.0, lz);
           faceMonsterForward(m, 0 - lx, -9.5 - lz);
         });
@@ -2349,10 +2349,10 @@
             const hasAll3Weapons = Boolean(weaponMeshes[1] && weaponMeshes[2] && weaponMeshes[3]);
             results.push({ name: "All 3 Blender 3D Shop Weapons Loaded & Equippable", pass: hasAll3Weapons });
 
-            // Permanent Air & Tree Pickup + Follow Physics Test (Witch, Bat, Spider!)
+            // Permanent Air & Tree Pickup + Follow Physics Test (Bat, Eyeball, Spider!)
             const airTargets = [
-              { key: "Monster_Witch", flies: true, startY: 2.7 },
               { key: "Monster_Bat", flies: true, startY: 2.4 },
+              { key: "Monster_Eyeball", flies: true, startY: 2.1 },
               { key: "Monster_Spider", flies: false, startY: 2.69 },
             ];
             let airFollowPass = true;
@@ -2582,18 +2582,22 @@
               wSt.hp = wSt.maxHp;
               wObj.userData.defeatedFollow = false;
               wObj.userData.caged = false;
-              wObj.position.set(20, 2.0, 20);
+              wObj.position.set(20, 0.0, 20);
               player.position.set(20, 0, 28);
               const notFollowingBeforeKill = !wObj.userData.defeatedFollow;
               // Kill the Witch FIRST using damageMonster!
               damageMonster(wObj, wSt.maxHp);
               const followingAfterKill = Boolean(wSt.hp === 0 && wObj.userData.defeatedFollow);
-              // Walk the hero 12m away — Witch MUST physically move & follow!
+              // Walk the hero 12m away — Witch MUST physically WALK on the ground with swinging legs!
+              let witchLegSwung = false;
+              const wRig = getMonsterRig(wObj);
               for (let i = 0; i < 60; i++) {
                 player.position.z += 0.2;
                 player.position.x += 0.05;
                 if (wObj.userData.defeatedFollow) {
-                  followCapturedMonster(wObj, player, 0.24, 0.97, 0.05, { flies: true, followDist: 2.0 });
+                  followCapturedMonster(wObj, player, 0.24, 0.97, 0.05, { flies: false, followDist: 2.0 });
+                  updateLifelikeMonster(wObj, 0.05, i * 0.05, player);
+                  if (wRig.hipL && Math.abs(wRig.hipL.rotation.x) > 0.15) witchLegSwung = true;
                 }
               }
               const followEndDist = Math.hypot(player.position.x - wObj.position.x, player.position.z - wObj.position.z);
@@ -2602,7 +2606,7 @@
               const cagedNow = tryCageFollowingMonster();
               const insideCauldron = isMonsterInsideCage(wObj, labPodPositions[4]);
               const capOnTop = wCap4 ? isCageCapSealed(wCap4, labPodPositions[4]) : true;
-              witchTestPass = Boolean(notFollowingBeforeKill && followingAfterKill && followEndDist < 3.4 && cagedNow && insideCauldron && capOnTop);
+              witchTestPass = Boolean(notFollowingBeforeKill && followingAfterKill && witchLegSwung && followEndDist < 3.4 && cagedNow && insideCauldron && capOnTop);
               // Restore cleanly
               wSt.hp = wSavedHp;
               wObj.userData.defeatedFollow = wSavedFollow;
@@ -3816,10 +3820,10 @@
           updateHeroHpUI();
         }
 
-        // Any defeated (killed) un-caged monster — including the Witch! — automatically follows the hero!
+        // Any defeated (killed) un-caged monster — including the walking Witch! — automatically follows the hero!
         for (const mObj of animList) {
           if (!mObj || !mObj.visible || isMonsterCaged(mObj) || !mObj.userData.defeatedFollow) continue;
-          const isFly = mObj.name === "Monster_Witch" || mObj.name === "Monster_Bat" || mObj.name === "Monster_Eyeball" || mObj.name === "Monster_ShadowGuy" || mObj.name === "Monster_Ghost" || mObj.name === "Monster_FlyingPumpkin";
+          const isFly = mObj.name === "Monster_Bat" || mObj.name === "Monster_Eyeball" || mObj.name === "Monster_ShadowGuy" || mObj.name === "Monster_Ghost" || mObj.name === "Monster_FlyingPumpkin";
           followCapturedMonster(mObj, player, forwardX, forwardZ, dt, { flies: isFly, followDist: 2.0 });
         }
 
