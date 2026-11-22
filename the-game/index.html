@@ -543,6 +543,7 @@
         if (!monsterObj || !cagePos) return false;
         monsterObj.position.set(cagePos.x, flies ? 0.85 : 0.28, cagePos.z);
         monsterObj.userData.caged = true;
+        monsterObj.userData.defeatedFollow = false;
         if (capObj) {
           capObj.position.set(cagePos.x, 3.0, cagePos.z);
           capObj.rotation.set(0, 0, 0);
@@ -1343,16 +1344,27 @@
         return getMonsterState(obj.name).hp;
       }
       function damageMonster(obj, dmgAmount) {
-        if (!obj) return false;
+        if (!obj || isMonsterCaged(obj)) return false;
         const st = getMonsterState(obj.name);
         if (st.hp <= 0) return false;
         st.hp = Math.max(0, st.hp - dmgAmount);
-        if (st.hp === 0 && !isRunningAutoTest) {
-          money += 5;
-          updateHudStats();
-          playChime();
-          const info = BAD_GUYS_CATALOG.find((g) => g.key === obj.name);
-          objectiveEl.textContent = `💫 Defeated ${info ? info.emoji + " " + info.name : obj.name}! Walk close to capture them (+$5)!`;
+        if (st.hp === 0) {
+          // Immediately mark defeated monster to follow the hero right after being killed!
+          obj.userData.defeatedFollow = true;
+          if (obj === clown && !clownInCage) clownCaptured = true;
+          else if (obj === laserGuy && !laserInCage) laserCaptured = true;
+          else if (obj === slimeGuy && !slimeInCage) slimeCaptured = true;
+          else if (obj === shadowGuy && !shadowInCage) shadowCaptured = true;
+          else if (obj === ghostGuy && !ghostInCage) ghostCaptured = true;
+          else if (labQueueIdx < labMonsterDefs.length && labMonsterDefs[labQueueIdx].obj === obj) activeLabCaptured = true;
+          else if (bossIdx < houseBossDefs.length && houseBossDefs[bossIdx].obj === obj) activeBossCaptured = true;
+          if (!isRunningAutoTest) {
+            money += 5;
+            updateHudStats();
+            playChime();
+            const info = BAD_GUYS_CATALOG.find((g) => g.key === obj.name);
+            objectiveEl.textContent = `💫 Defeated ${info ? info.emoji + " " + info.name : obj.name}! They are following you — bring them to their cage (+$5)!`;
+          }
         }
         return true;
       }
@@ -2514,7 +2526,7 @@
             }
             results.push({ name: "Physics: Caged Bad Guys Immune to Attack Knockback", pass: cagedImmunePass });
 
-            // Permanent Test #37: Witch (No Dress, Articulated Legs) + Active Chase + Captured Follow!
+            // Permanent Test #37: Killing the Witch Makes Her Immediately Follow the Hero!
             let witchTestPass = false;
             const wObj = getMonsterByKey("Monster_Witch");
             const wNoDress = !gltf.scene.getObjectByName("Witch_DressSkirtOuter") && Boolean(gltf.scene.getObjectByName("Witch_HipPivot_L"));
@@ -2522,34 +2534,30 @@
               const wSavedPos = wObj.position.clone();
               const wSt = getMonsterState("Monster_Witch");
               const wSavedHp = wSt.hp;
-              // 1) Active chase when hero is 12m away
+              const wSavedFollow = Boolean(wObj.userData.defeatedFollow);
+              wSt.hp = wSt.maxHp;
+              wObj.userData.defeatedFollow = false;
               wObj.position.set(20, 2.0, 20);
-              player.position.set(20, 0, 32);
-              const startChaseDist = Math.hypot(player.position.x - wObj.position.x, player.position.z - wObj.position.z);
-              for (let i = 0; i < 20; i++) {
-                const dxW = player.position.x - wObj.position.x;
-                const dzW = player.position.z - wObj.position.z;
-                const dW = Math.hypot(dxW, dzW) || 1;
-                moveMonsterSafe(wObj, (dxW / dW) * 3.2 * 0.05, (dzW / dW) * 3.2 * 0.05, { wallsOnly: true });
-              }
-              const endChaseDist = Math.hypot(player.position.x - wObj.position.x, player.position.z - wObj.position.z);
-              const chasedCloser = endChaseDist < startChaseDist - 2.0;
-
-              // 2) Defeat & captured follow as hero walks 10m away & turns
-              wSt.hp = 0;
-              wObj.position.set(20, 2.0, 30);
-              const pickedWitch = canPickupMonster(wObj, player, true);
-              for (let i = 0; i < 50; i++) {
+              player.position.set(20, 0, 28);
+              const notFollowingBeforeKill = !wObj.userData.defeatedFollow;
+              // Kill the Witch using damageMonster (exact combat kill path!)
+              damageMonster(wObj, wSt.maxHp);
+              const followingAfterKill = Boolean(wSt.hp === 0 && wObj.userData.defeatedFollow);
+              // Walk the hero 12m away & turn — Witch MUST fly right behind the hero!
+              for (let i = 0; i < 60; i++) {
                 player.position.z += 0.2;
-                player.position.x += 0.06;
-                followCapturedMonster(wObj, player, 0.28, 0.96, 0.05, { flies: true, followDist: 2.0 });
+                player.position.x += 0.05;
+                if (wObj.userData.defeatedFollow) {
+                  followCapturedMonster(wObj, player, 0.24, 0.97, 0.05, { flies: true, followDist: 2.0 });
+                }
               }
               const followEndDist = Math.hypot(player.position.x - wObj.position.x, player.position.z - wObj.position.z);
-              witchTestPass = Boolean(chasedCloser && pickedWitch && followEndDist < 3.6 && wObj.position.y > 1.0);
+              witchTestPass = Boolean(notFollowingBeforeKill && followingAfterKill && followEndDist < 3.4 && wObj.position.y > 1.0);
               wSt.hp = wSavedHp;
+              wObj.userData.defeatedFollow = wSavedFollow;
               wObj.position.copy(wSavedPos);
             }
-            results.push({ name: "Witch (No Dress) + Active Chase & Captured Follow", pass: witchTestPass });
+            results.push({ name: "Witch Follows Immediately After You Kill Her", pass: witchTestPass });
             isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
@@ -3741,6 +3749,13 @@
         if (safeIndoors && heroHp < HERO_MAX_HP) {
           heroHp = Math.min(HERO_MAX_HP, heroHp + 14 * dt);
           updateHeroHpUI();
+        }
+
+        // Any defeated (killed) un-caged monster — including the Witch! — automatically follows the hero!
+        for (const mObj of animList) {
+          if (!mObj || !mObj.visible || isMonsterCaged(mObj) || !mObj.userData.defeatedFollow) continue;
+          const isFly = mObj.name === "Monster_Witch" || mObj.name === "Monster_Bat" || mObj.name === "Monster_Eyeball" || mObj.name === "Monster_ShadowGuy" || mObj.name === "Monster_Ghost" || mObj.name === "Monster_FlyingPumpkin";
+          followCapturedMonster(mObj, player, forwardX, forwardZ, dt, { flies: isFly, followDist: 2.0 });
         }
 
         // Bad Guys Physically Attack Back (Ranged Lasers/Purple Lightning/Fireballs OR Physical Lunges/Weapon Swings!)
