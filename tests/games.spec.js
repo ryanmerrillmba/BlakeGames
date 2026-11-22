@@ -6,20 +6,21 @@ const localGames = [
   ['/nut-throw-catch/', 'Nut Throw Catch'],
   ['/spooky-time/', 'Spooky Time'],
   ['/build-to-survive-apocalypse/', 'Build to Survive'],
+  ['/the-game/', 'The Game'],
 ];
 
 async function blockThirdParties(page) {
   await page.route(/googletagmanager|sentry-cdn|\.ingest\.us\.sentry\.io/, (route) => route.fulfill({ status: 204, body: '' }));
 }
 
-test('landing page exposes only the five real playable games and required homepage copy', async ({ page }) => {
+test('landing page exposes only the six real playable games and required homepage copy', async ({ page }) => {
   await blockThirdParties(page);
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Available games' })).toBeVisible();
   await expect(page.getByText('Last updated October 31, 2026')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Pick a game and start playing.' })).toBeVisible();
   await expect(page.getByText("Welcome to Blake's Arcade. Each game has its own world, characters, and challenges.")).toBeVisible();
-  await expect(page.locator('.game-card')).toHaveCount(5);
+  await expect(page.locator('.game-card')).toHaveCount(6);
   await expect(page.locator('.coming-soon')).toHaveCount(0);
   await expect(page.getByText(/Next game\s*loading/i)).toHaveCount(0);
   await expect(page.locator('.plus')).toHaveCount(0);
@@ -29,12 +30,14 @@ test('landing page exposes only the five real playable games and required homepa
     'Nut Throw Catch',
     'Spooky Time',
     'Build to Survive Apocalypse',
+    'The Game',
   ]);
   await expect(page.locator('a[href="flop-and-dope/index.html"]')).toBeVisible();
   await expect(page.locator('a[href="10-military-mills/index.html"]')).toBeVisible();
   await expect(page.locator('a[href="spooky-time/index.html"]')).toBeVisible();
   await expect(page.locator('a[href="build-to-survive-apocalypse/index.html"]')).toBeVisible();
   await expect(page.locator('a[href="nut-throw-catch/index.html"]')).toBeVisible();
+  await expect(page.locator('a[href="the-game/index.html"]')).toBeVisible();
 });
 
 for (const [path, title] of localGames) {

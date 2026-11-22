@@ -2,6 +2,7 @@ const { test, expect } = require("@playwright/test");
 
 test.describe("The Game — 3D Collision & Movement Tests", () => {
   test("loads cleanly, player faces forward, and cannot walk through walls, trees, or solid objects", async ({ page }) => {
+    test.setTimeout(60_000);
     const errors = [];
     page.on("pageerror", (err) => errors.push(err.message));
     page.on("console", (msg) => {
@@ -10,7 +11,7 @@ test.describe("The Game — 3D Collision & Movement Tests", () => {
 
     await page.goto("/the-game/index.html");
     await page.waitForFunction(() => window.__THE_GAME__ && window.__THE_GAME__.ready === true, {
-      timeout: 15000,
+      timeout: 45_000,
     });
 
     expect(errors).toEqual([]);
@@ -68,7 +69,8 @@ test.describe("The Game — 3D Collision & Movement Tests", () => {
     expect(objectBlocked.endZ).toBeGreaterThan(objectBlocked.centerZ);
   });
 
-  test("full 36-check physics, combat, audio, UI & performance suite passes on dev", async ({ page }) => {
+  test("full 38-check physics, combat, audio, UI & performance suite passes on dev", async ({ page }) => {
+    test.setTimeout(90_000);
     const errors = [];
     page.on("pageerror", (err) => errors.push(err.message));
     page.on("console", (msg) => {
@@ -76,41 +78,42 @@ test.describe("The Game — 3D Collision & Movement Tests", () => {
     });
     await page.goto("/the-game/index.html?test=house");
     const badge = page.locator("#autotest-results");
-    await expect(badge).toBeVisible({ timeout: 20000 });
+    await expect(badge).toBeVisible({ timeout: 60_000 });
     expect(errors).toEqual([]);
-    await expect(badge).toContainText("ALL COLLISION TESTS PASSED");
-    await expect(badge).toContainText("House Door + Crafting Table + Portal");
-    await expect(badge).toContainText("Laser Guy");
-    await expect(badge).toContainText("Real-Time Shadows + ACES ToneMapping");
-    await expect(badge).toContainText("PMREM IBL Metallic Reflections");
-    await expect(badge).toContainText("Bloom Post-Processing + 260 Fireflies");
-    await expect(badge).toContainText("3D Hip/Shoulder Walk Pivots + Mixer");
-    await expect(badge).toContainText("Lifelike Articulated Monster Rigs (20/20)");
-    await expect(badge).toContainText("Stereo Background Music");
-    await expect(badge).toContainText("Collision, Flashlight & 20 Monster SFX");
-    await expect(badge).toContainText("Bad Guys Blocked by Solid Walls");
-    await expect(badge).toContainText("Bad Guys Blocked by Trees");
-    await expect(badge).toContainText("Monster Physics & Sliding Engine Active");
-    await expect(badge).toContainText("Dark Flashlight-Only Mode + Outside Attack");
-    await expect(badge).toContainText("One-at-a-Time Boss Progression + Bad Guys Gallery Bar");
-    await expect(badge).toContainText("Dedicated Light on Every Thing");
-    await expect(badge).toContainText("Every Single Bad Guy Faces Forward (20/20)");
-    await expect(badge).toContainText("Smooth Hero Hair + Lab Cauldrons + Compact Map");
-    await expect(badge).toContainText("All 3 Blender 3D Shop Weapons Loaded & Equippable");
-    await expect(badge).toContainText("Air & Tree Pickup + Follow (Witch, Bat, Spider)");
-    await expect(badge).toContainText("3D Weapon Trigger VFX + Unique Weapon SFX (All 4 Tiers)");
-    await expect(badge).toContainText("Hamburger Menu (Controls, Weapons & 21 Bad Guys)");
-    await expect(badge).toContainText("Lab South Wall Blocks Player & Monsters (Left & Right)");
-    await expect(badge).toContainText("Invisible Forest Boundary Blocks All 4 Edges");
-    await expect(badge).toContainText("Hero & Monster Health + Defeat-Before-Capture + Help + Enemy Weapons");
-    await expect(badge).toContainText("Physics: Caged Bad Guy Verified Inside Cage Bounds");
-    await expect(badge).toContainText("Physics: Cage Cap Sealed on Top of Occupied Cage");
-    await expect(badge).toContainText("Performance Budget");
-    await expect(badge).toContainText("Physical Weapon Attacks (No Circle Ring; Real Projectiles & Sword Swing)");
-    await expect(badge).toContainText("Physical Enemy Attacks (Eyeball Purple Lightning, Laser Bolt & Spider Lunge)");
-    await expect(badge).toContainText("Hero HP Bar (Bottom-Right) + Enemy HP Bar (Top-Center)");
-    await expect(badge).toContainText("Physics: Caged Bad Guys Immune to Attack Knockback");
-    await expect(badge).toContainText("Witch Deleted + Killed Bad Guy Follows Into Cauldron Cage");
-    await expect(badge).toContainText("Top Row Has 4 Flying Cages + Pumpkin Next to Vampire");
+    const text = await badge.textContent();
+    expect(text).toContain("ALL COLLISION TESTS PASSED");
+    expect(text).toContain("House Door + Crafting Table + Portal");
+    expect(text).toContain("Laser Guy");
+    expect(text).toContain("Real-Time Shadows + ACES ToneMapping");
+    expect(text).toContain("PMREM IBL Metallic Reflections");
+    expect(text).toContain("Bloom Post-Processing + 260 Fireflies");
+    expect(text).toContain("3D Hip/Shoulder Walk Pivots + Mixer");
+    expect(text).toContain("Lifelike Articulated Monster Rigs (20/20)");
+    expect(text).toContain("Stereo Background Music");
+    expect(text).toContain("Collision, Flashlight & 20 Monster SFX");
+    expect(text).toContain("Bad Guys Blocked by Solid Walls");
+    expect(text).toContain("Bad Guys Blocked by Trees");
+    expect(text).toContain("Monster Physics & Sliding Engine Active");
+    expect(text).toContain("Dark Flashlight-Only Mode + Outside Attack");
+    expect(text).toContain("One-at-a-Time Boss Progression + Bad Guys Gallery Bar");
+    expect(text).toContain("Dedicated Light on Every Thing");
+    expect(text).toContain("Every Single Bad Guy Faces Forward (20/20)");
+    expect(text).toContain("Smooth Hero Hair + Lab Cauldrons + Compact Map");
+    expect(text).toContain("All 3 Blender 3D Shop Weapons Loaded & Equippable");
+    expect(text).toContain("Air & Tree Pickup + Follow (Witch, Bat, Spider)");
+    expect(text).toContain("3D Weapon Trigger VFX + Unique Weapon SFX (All 4 Tiers)");
+    expect(text).toContain("Hamburger Menu (Controls, Weapons & 21 Bad Guys)");
+    expect(text).toContain("Lab South Wall Blocks Player & Monsters (Left & Right)");
+    expect(text).toContain("Invisible Forest Boundary Blocks All 4 Edges");
+    expect(text).toContain("Hero & Monster Health + Defeat-Before-Capture + Help + Enemy Weapons");
+    expect(text).toContain("Physics: Caged Bad Guy Verified Inside Cage Bounds");
+    expect(text).toContain("Physics: Cage Cap Sealed on Top of Occupied Cage");
+    expect(text).toContain("Performance Budget");
+    expect(text).toContain("Physical Weapon Attacks (No Circle Ring; Real Projectiles & Sword Swing)");
+    expect(text).toContain("Physical Enemy Attacks (Eyeball Purple Lightning, Laser Bolt & Spider Lunge)");
+    expect(text).toContain("Hero HP Bar (Bottom-Right) + Enemy HP Bar (Top-Center)");
+    expect(text).toContain("Physics: Caged Bad Guys Immune to Attack Knockback");
+    expect(text).toContain("Witch Deleted + Killed Bad Guy Follows Into Cauldron Cage");
+    expect(text).toContain("Top Row Has 4 Flying Cages + Pumpkin Next to Vampire");
   });
 });

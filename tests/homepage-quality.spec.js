@@ -34,10 +34,16 @@ const localInteractions = {
     await page.keyboard.press('ArrowRight');
     await expect(page.locator('#message')).toBeHidden();
   },
+  '/the-game/index.html': async (page) => {
+    await expect(page.locator('#start-play-btn')).toBeVisible();
+    await page.locator('#start-play-btn').click();
+    await expect(page.locator('#start-overlay')).toBeHidden();
+    await expect(page.locator('canvas').first()).toBeVisible({ timeout: 20_000 });
+  },
 };
 
 test('every homepage Play link is publicly reachable and each local game starts without browser errors', async ({ page, request }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
   const failures = [];
   const homepageErrors = captureBrowserErrors(page);
   const homepageResponse = await page.goto('/');
