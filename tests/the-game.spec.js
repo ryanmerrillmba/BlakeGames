@@ -111,5 +111,6 @@ test.describe("The Game — 3D Collision & Movement Tests", () => {
     await expect(badge).toContainText("Hero HP Bar (Bottom-Right) + Enemy HP Bar (Top-Center)");
     await expect(badge).toContainText("Physics: Caged Bad Guys Immune to Attack Knockback");
     await expect(badge).toContainText("Witch Deleted + Killed Bad Guy Follows Into Cauldron Cage");
+    await expect(badge).toContainText("Top Row Has 4 Flying Cages + Pumpkin Next to Vampire");
   });
 });

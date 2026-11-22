@@ -505,17 +505,17 @@
       // 9 Lab Monsters queue (Pods 4..12) unlocked one by one after Slime Guy!
       const labMonsterDefs = [
         { key: "Monster_Vampire", label: "🧛 Vampire", podIdx: 3, flies: false },
-        { key: "Monster_Pumpkin", label: "🎃 Pumpkin", podIdx: 5, flies: false },
-        { key: "Monster_Cat", label: "🐈‍⬛ Cat", podIdx: 6, flies: false },
-        { key: "Monster_Bat", label: "🦇 Bat", podIdx: 7, flies: true },
-        { key: "Monster_Spider", label: "🕷️ Spider", podIdx: 8, flies: false },
-        { key: "Monster_Skeleton", label: "💀 Skeleton", podIdx: 9, flies: false },
-        { key: "Monster_Eyeball", label: "👁️ Magical Eyeball", podIdx: 10, flies: true },
-        { key: "Monster_Robot", label: "🤖 Robot", podIdx: 11, flies: false },
-        { key: "Monster_Frankenstein", label: "🧟‍♂️ Frankenstein", podIdx: 12, flies: false },
-        { key: "Monster_Zombie", label: "🧟 Zombie", podIdx: 13, flies: false },
-        { key: "Monster_Werewolf", label: "🐺 Gray Werewolf", podIdx: 12, loftCageIdx: 0, flies: false },
-        { key: "Monster_Mummy", label: "🧻 Mummy", podIdx: 13, loftCageIdx: 1, flies: false },
+        { key: "Monster_Pumpkin", label: "🎃 Pumpkin", podIdx: 4, flies: false },
+        { key: "Monster_Cat", label: "🐈‍⬛ Cat", podIdx: 5, flies: false },
+        { key: "Monster_Bat", label: "🦇 Bat", podIdx: 6, loftCageIdx: 0, flies: true },
+        { key: "Monster_Spider", label: "🕷️ Spider", podIdx: 6, flies: false },
+        { key: "Monster_Skeleton", label: "💀 Skeleton", podIdx: 7, flies: false },
+        { key: "Monster_Eyeball", label: "👁️ Magical Eyeball", podIdx: 8, loftCageIdx: 1, flies: true },
+        { key: "Monster_Robot", label: "🤖 Robot", podIdx: 8, flies: false },
+        { key: "Monster_Frankenstein", label: "🧟‍♂️ Frankenstein", podIdx: 9, flies: false },
+        { key: "Monster_Zombie", label: "🧟 Zombie", podIdx: 10, flies: false },
+        { key: "Monster_Werewolf", label: "🐺 Gray Werewolf", podIdx: 11, flies: false },
+        { key: "Monster_Mummy", label: "🧻 Mummy", podIdx: 12, flies: false },
       ];
       let onLoft = false;
       const ladderPos = new THREE.Vector3(9.5, 0, -22.0);
@@ -2056,7 +2056,9 @@
           if (slimeGuy) slimeGuy.visible = false;
           if (shadowGuy) shadowGuy.visible = false;
           if (ghostGuy) ghostGuy.visible = false;
-          const loftGhostCage = gltf.scene.getObjectByName("Loft_Cage_Base_2") || gltf.scene.getObjectByName("House_Cage_Base_1");
+          const loftShadowCage = gltf.scene.getObjectByName("Loft_Cage_Base_2");
+          if (loftShadowCage) rareCagePos.copy(loftShadowCage.position);
+          const loftGhostCage = gltf.scene.getObjectByName("Loft_Cage_Base_3") || gltf.scene.getObjectByName("Loft_Cage_Base_2");
           if (loftGhostCage) rareCage2Pos.copy(loftGhostCage.position);
           for (const def of labMonsterDefs) {
             def.obj = gltf.scene.getObjectByName(def.key);
@@ -2090,9 +2092,9 @@
           if (pod1) secondPodPos.copy(pod1.position);
           const pod2 = gltf.scene.getObjectByName("Pod_Base_2");
           if (pod2) thirdPodPos.copy(pod2.position);
-          const rare0 = gltf.scene.getObjectByName("House_Cage_Base_0");
+          const rare0 = gltf.scene.getObjectByName("Loft_Cage_Base_2") || gltf.scene.getObjectByName("House_Cage_Base_0");
           if (rare0) rareCagePos.copy(rare0.position);
-          const rare1 = gltf.scene.getObjectByName("House_Cage_Base_1");
+          const rare1 = gltf.scene.getObjectByName("Loft_Cage_Base_3") || gltf.scene.getObjectByName("House_Cage_Base_1");
           if (rare1) rareCage2Pos.copy(rare1.position);
 
           // Glowing red laser beam for Red Laser Guy
@@ -2609,6 +2611,21 @@
               if (vCap3 && vCapPos) vCap3.position.copy(vCapPos);
             }
             results.push({ name: "Witch Deleted + Killed Bad Guy Follows Into Cauldron Cage", pass: killFollowPass });
+            const has4LoftCages = Boolean(
+              gltf.scene.getObjectByName("Loft_Cage_Base_0") &&
+              gltf.scene.getObjectByName("Loft_Cage_Base_1") &&
+              gltf.scene.getObjectByName("Loft_Cage_Base_2") &&
+              gltf.scene.getObjectByName("Loft_Cage_Base_3")
+            );
+            const vampDef = labMonsterDefs.find((d) => d.key === "Monster_Vampire");
+            const pumpDef = labMonsterDefs.find((d) => d.key === "Monster_Pumpkin");
+            const batDef = labMonsterDefs.find((d) => d.key === "Monster_Bat");
+            const eyeDef = labMonsterDefs.find((d) => d.key === "Monster_Eyeball");
+            const layoutPass = Boolean(
+              has4LoftCages && vampDef && pumpDef && pumpDef.podIdx === vampDef.podIdx + 1 &&
+              batDef && batDef.loftCageIdx === 0 && eyeDef && eyeDef.loftCageIdx === 1
+            );
+            results.push({ name: "Top Row Has 4 Flying Cages + Pumpkin Next to Vampire", pass: layoutPass });
             isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
