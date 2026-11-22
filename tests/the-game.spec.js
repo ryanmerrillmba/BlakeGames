@@ -110,6 +110,6 @@ test.describe("The Game — 3D Collision & Movement Tests", () => {
     await expect(badge).toContainText("Physical Enemy Attacks (Witch Purple Lightning, Laser Bolt & Spider Lunge)");
     await expect(badge).toContainText("Hero HP Bar (Bottom-Right) + Enemy HP Bar (Top-Center)");
     await expect(badge).toContainText("Physics: Caged Bad Guys Immune to Attack Knockback");
-    await expect(badge).toContainText("Witch Follows Immediately After You Kill Her");
+    await expect(badge).toContainText("Witch Follows After Kill & Goes Into Cauldron Cage");
   });
 });

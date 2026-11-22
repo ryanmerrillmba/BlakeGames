@@ -573,6 +573,44 @@
         const horizDist = Math.hypot(capObj.position.x - cagePos.x, capObj.position.z - cagePos.z);
         return horizDist < 0.30 && capObj.position.y >= 2.8 && capObj.position.y <= 3.3;
       }
+
+      const labPodPositions = {}; // podIdx -> THREE.Vector3
+      function findFollowingDefeatedMonster() {
+        const list = [clown, laserGuy, slimeGuy, shadowGuy, ghostGuy, ...labMonsterDefs.map((d) => d.obj), ...houseBossDefs.map((b) => b.obj)];
+        for (const m of list) {
+          if (m && m.visible && !isMonsterCaged(m) && m.userData && m.userData.defeatedFollow) return m;
+        }
+        return null;
+      }
+      function findNearestLabCauldron() {
+        if (!player) return null;
+        let best = null;
+        let bestDist = 4.8;
+        for (const [idxStr, pos] of Object.entries(labPodPositions)) {
+          const d = Math.hypot(player.position.x - pos.x, player.position.z - pos.z);
+          if (d < bestDist) {
+            bestDist = d;
+            best = { idx: parseInt(idxStr, 10), pos, cap: podCaps[parseInt(idxStr, 10)] || null };
+          }
+        }
+        return best;
+      }
+      function tryCageFollowingMonster() {
+        const m = findFollowingDefeatedMonster();
+        if (!m) return false;
+        const pod = findNearestLabCauldron();
+        if (!pod) return false;
+        const isFly = m.name === "Monster_Witch" || m.name === "Monster_Bat" || m.name === "Monster_Eyeball" || m.name === "Monster_ShadowGuy" || m.name === "Monster_Ghost" || m.name === "Monster_FlyingPumpkin";
+        placeMonsterInCage(m, pod.pos, pod.cap, isFly);
+        if (!isRunningAutoTest) {
+          money += 10;
+          updateHudStats();
+          playChime();
+          const info = BAD_GUYS_CATALOG.find((g) => g.key === m.name);
+          objectiveEl.textContent = `🧪 Put ${info ? info.emoji + " " + info.name : m.name} into Cauldron Cage ${pod.idx + 1}! (+$10)`;
+        }
+        return true;
+      }
       let craftTableObj = null;
       let portalObjRef = null;
       let firstPodPos = new THREE.Vector3(-9.0, 0, -9.0);
@@ -2044,6 +2082,8 @@
           for (let ci = 0; ci < 14; ci++) {
             const capM = gltf.scene.getObjectByName(`Pod_Cap_${ci}`);
             if (capM) podCaps[ci] = capM;
+            const baseM = gltf.scene.getObjectByName(`Pod_Base_${ci}`);
+            if (baseM) labPodPositions[ci] = baseM.position.clone();
           }
           craftTableObj = gltf.scene.getObjectByName("Cabin_Crafting_Table");
           portalObjRef = gltf.scene.getObjectByName("Cabin_Teleporter_Portal");
@@ -2526,24 +2566,29 @@
             }
             results.push({ name: "Physics: Caged Bad Guys Immune to Attack Knockback", pass: cagedImmunePass });
 
-            // Permanent Test #37: Killing the Witch Makes Her Immediately Follow the Hero!
+            // Permanent Test #37: Killing the Witch First Makes Her Move/Follow & Go Into a Cauldron Cage!
             let witchTestPass = false;
             const wObj = getMonsterByKey("Monster_Witch");
             const wNoDress = !gltf.scene.getObjectByName("Witch_DressSkirtOuter") && Boolean(gltf.scene.getObjectByName("Witch_HipPivot_L"));
-            if (wObj && wNoDress) {
+            if (wObj && wNoDress && labPodPositions[4]) {
               const wSavedPos = wObj.position.clone();
+              const wSavedVis = wObj.visible;
               const wSt = getMonsterState("Monster_Witch");
               const wSavedHp = wSt.hp;
               const wSavedFollow = Boolean(wObj.userData.defeatedFollow);
+              const wCap4 = podCaps[4];
+              const wCapPos = wCap4 ? wCap4.position.clone() : null;
+              wObj.visible = true;
               wSt.hp = wSt.maxHp;
               wObj.userData.defeatedFollow = false;
+              wObj.userData.caged = false;
               wObj.position.set(20, 2.0, 20);
               player.position.set(20, 0, 28);
               const notFollowingBeforeKill = !wObj.userData.defeatedFollow;
-              // Kill the Witch using damageMonster (exact combat kill path!)
+              // Kill the Witch FIRST using damageMonster!
               damageMonster(wObj, wSt.maxHp);
               const followingAfterKill = Boolean(wSt.hp === 0 && wObj.userData.defeatedFollow);
-              // Walk the hero 12m away & turn — Witch MUST fly right behind the hero!
+              // Walk the hero 12m away — Witch MUST physically move & follow!
               for (let i = 0; i < 60; i++) {
                 player.position.z += 0.2;
                 player.position.x += 0.05;
@@ -2552,12 +2597,21 @@
                 }
               }
               const followEndDist = Math.hypot(player.position.x - wObj.position.x, player.position.z - wObj.position.z);
-              witchTestPass = Boolean(notFollowingBeforeKill && followingAfterKill && followEndDist < 3.4 && wObj.position.y > 1.0);
+              // Now walk up to Cauldron Cage 4 & put her inside it!
+              player.position.set(labPodPositions[4].x, 0, labPodPositions[4].z + 2.5);
+              const cagedNow = tryCageFollowingMonster();
+              const insideCauldron = isMonsterInsideCage(wObj, labPodPositions[4]);
+              const capOnTop = wCap4 ? isCageCapSealed(wCap4, labPodPositions[4]) : true;
+              witchTestPass = Boolean(notFollowingBeforeKill && followingAfterKill && followEndDist < 3.4 && cagedNow && insideCauldron && capOnTop);
+              // Restore cleanly
               wSt.hp = wSavedHp;
               wObj.userData.defeatedFollow = wSavedFollow;
+              wObj.userData.caged = false;
+              wObj.visible = wSavedVis;
               wObj.position.copy(wSavedPos);
+              if (wCap4 && wCapPos) wCap4.position.copy(wCapPos);
             }
-            results.push({ name: "Witch Follows Immediately After You Kill Her", pass: witchTestPass });
+            results.push({ name: "Witch Follows After Kill & Goes Into Cauldron Cage", pass: witchTestPass });
             isRunningAutoTest = false;
 
             // Restore player (or stay in House if ?test=house)
@@ -2746,6 +2800,12 @@
           } else {
             objectiveEl.textContent = "🪓 Craft a Lv.2 Axe (2 Wood + 1 Stone) at the Crafting Table to get $10 from the Slime Guy!";
           }
+          return;
+        }
+
+        // Throw ANY killed following monster (including Witch killed first!) into the nearest Lab Cauldron Cage!
+        if (tryCageFollowingMonster()) {
+          actionPromptEl.style.display = "none";
           return;
         }
 
@@ -3628,6 +3688,11 @@
           actionPromptEl.style.display = "block";
         } else if (nearActiveCage) {
           actionPromptEl.textContent = `Press SPACEBAR to Throw ${activeInfo.monsterLabel} into ${activeInfo.cageLabel}!`;
+          actionPromptEl.style.display = "block";
+        } else if (findFollowingDefeatedMonster() && findNearestLabCauldron()) {
+          const fm = findFollowingDefeatedMonster();
+          const info = BAD_GUYS_CATALOG.find((g) => g.key === fm.name);
+          actionPromptEl.textContent = `🧪 Press SPACEBAR / E to Put ${info ? info.emoji + " " + info.name : fm.name} in the Cauldron Cage!`;
           actionPromptEl.style.display = "block";
         } else if (clownInCage && inCabin && !borrowedMoney) {
           objectiveEl.textContent = "🏚️ It's abandoned! Go back to the Clown's cage and take $10 for free!";
