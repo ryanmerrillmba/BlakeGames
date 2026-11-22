@@ -145,7 +145,7 @@
   </head>
   <body>
     <div id="start-overlay">
-      <img src="./guys.png" alt="The Game Monsters" />
+      <img src="./guys.png?v=2" alt="The Game Monsters" />
       <button id="start-play-btn" type="button">▶ PLAY THE GAME!</button>
     </div>
 
@@ -209,7 +209,7 @@
           </div>
         </div>
         <div style="text-align:center;margin-bottom:16px;">
-          <img src="./guys.png" alt="All Bad Guys Poster" style="max-width:100%;max-height:300px;border-radius:12px;border:2px solid #38bdf8;box-shadow:0 0 24px rgba(56,189,248,0.35);" />
+          <img src="./guys.png?v=2" alt="All Bad Guys Poster" style="max-width:100%;max-height:300px;border-radius:12px;border:2px solid #38bdf8;box-shadow:0 0 24px rgba(56,189,248,0.35);" />
         </div>
         <div id="badguys-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;"></div>
       </div>
@@ -365,7 +365,7 @@
       const pendingSprites = [];
       let loadedGuysImage = null;
 
-      const posterTex = new THREE.TextureLoader().load("./guys.png", (tex) => {
+      const posterTex = new THREE.TextureLoader().load("./guys.png?v=2", (tex) => {
         loadedGuysImage = tex.image;
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.needsUpdate = true;
